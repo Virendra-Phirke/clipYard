@@ -2,3 +2,5 @@ allowBuilds:
   '@firebase/util': true
   msw: true
   protobufjs: true
+patchedDependencies:
+  jwks-rsa: patches/jwks-rsa.patch
