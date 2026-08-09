@@ -3,9 +3,9 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'cliproom — real-time clipboard',
-  description: 'Move text between devices with a private, temporary shared room.',
-  generator: 'cliproom',
+  title: 'ClipYard — real-time text transfer',
+  description: 'A temporary clipboard for moving text between your devices. No account. No setup.',
+  generator: 'ClipYard',
   icons: {
     icon: [
       {
