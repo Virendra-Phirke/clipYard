@@ -4,6 +4,8 @@ import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { useTheme } from '@/components/ThemeProvider'
 import {
   type Device,
   type RoomLiveState,
@@ -44,48 +46,44 @@ const S = {
     display: 'flex',
     flexDirection: 'column' as const,
     fontFamily: 'Hanken Grotesk, sans-serif',
-    color: '#161d1a',
+    color: 'var(--cy-text)',
     fontSize: '16px',
     lineHeight: '24px',
     WebkitFontSmoothing: 'antialiased',
   },
   /* header */
   header: {
-    backgroundColor: '#f3fbf6',
-    borderBottom: '1.5px solid #bdc9c3',
+    backgroundColor: 'var(--cy-surface)',
+    borderBottom: '1.5px solid var(--cy-border-strong)',
     width: '100%',
-    height: '64px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '0 24px',
+    minHeight: '64px',
+    padding: '12px 24px',
     maxWidth: '1280px',
     margin: '0 auto',
     boxSizing: 'border-box' as const,
   },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: '24px' },
   logo: {
     fontFamily: 'Hanken Grotesk, sans-serif',
     fontSize: '24px',
     lineHeight: '32px',
     letterSpacing: '-0.01em',
     fontWeight: 700,
-    color: '#006a53',
+    color: 'var(--cy-primary-text)',
   },
   roomBadge: {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    backgroundColor: '#eef5f0',
+    backgroundColor: 'var(--cy-surface-container)',
     padding: '4px 12px',
     borderRadius: '2px',
-    border: '1.5px solid #d1d9d4',
+    border: '1.5px solid var(--cy-border)',
   },
   roomBadgeLabel: {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
-    color: '#3e4944',
+    color: 'var(--cy-text-secondary)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.05em',
   },
@@ -95,14 +93,14 @@ const S = {
     lineHeight: '20px',
     letterSpacing: '0.02em',
     fontWeight: 500,
-    color: '#161d1a',
+    color: 'var(--cy-text)',
   },
-  connectedDot: { width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16856a' },
+  connectedDot: { width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)' },
   connectedLabel: {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
-    color: '#3e4944',
+    color: 'var(--cy-text-secondary)',
     textTransform: 'uppercase' as const,
     letterSpacing: '0.02em',
   },
@@ -112,15 +110,16 @@ const S = {
     gap: '8px',
     padding: '8px 16px',
     backgroundColor: 'transparent',
-    border: '1.5px solid #d1d9d4',
+    border: '1.5px solid var(--cy-border)',
     borderRadius: '2px',
-    color: '#161d1a',
+    color: 'var(--cy-text)',
     cursor: 'pointer',
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '14px',
     letterSpacing: '0.02em',
     fontWeight: 500,
     transition: 'background-color 0.2s ease',
+    whiteSpace: 'nowrap' as const,
   },
   /* main grid */
   main: {
@@ -129,8 +128,6 @@ const S = {
     margin: '0 auto',
     width: '100%',
     padding: '32px 24px',
-    display: 'grid',
-    gridTemplateColumns: '1fr',
     gap: '24px',
     boxSizing: 'border-box' as const,
   },
@@ -139,11 +136,11 @@ const S = {
   editorCard: {
     display: 'flex',
     flexDirection: 'column' as const,
-    backgroundColor: '#f3fbf6',
+    backgroundColor: 'var(--cy-surface)',
     borderRadius: '4px',
-    border: '1.5px solid #d1d9d4',
+    border: '1.5px solid var(--cy-border)',
     overflow: 'hidden',
-    boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)',
+    boxShadow: '0 1px 2px 0 var(--cy-shadow)',
   },
   textarea: {
     width: '100%',
@@ -153,68 +150,75 @@ const S = {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
-    color: '#161d1a',
+    color: 'var(--cy-text)',
     backgroundColor: 'transparent',
     border: 'none',
+    minHeight: '300px',
     height: '600px',
+    maxHeight: '80vh',
+    boxSizing: 'border-box' as const,
   },
   editorFooter: {
     padding: '8px 16px',
-    borderTop: '1.5px solid #bdc9c3',
-    backgroundColor: '#eef5f0',
+    borderTop: '1.5px solid var(--cy-border-strong)',
+    backgroundColor: 'var(--cy-surface-container)',
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
-    color: '#3e4944',
+    color: 'var(--cy-text-secondary)',
+    flexWrap: 'wrap' as const,
+    gap: '8px',
   },
-  syncedDot: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#16856a' },
+  syncedDot: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)' },
   /* action buttons */
-  actionRow: { display: 'flex', gap: '16px' },
+  actionRow: { display: 'flex', gap: '16px', flexWrap: 'wrap' as const },
   copyBtn: {
     flex: 1,
-    backgroundColor: '#16856a',
-    color: '#fdfffc',
+    backgroundColor: 'var(--cy-primary)',
+    color: 'var(--cy-on-primary)',
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '14px',
     letterSpacing: '0.05em',
     fontWeight: 500,
     padding: '12px 24px',
     borderRadius: '4px',
-    border: '1.5px solid #16856a',
+    border: '1.5px solid var(--cy-primary)',
     cursor: 'pointer',
     textTransform: 'uppercase' as const,
     transition: 'background-color 0.2s ease',
+    minWidth: '120px',
   },
   clearBtn: {
     flex: 1,
     backgroundColor: 'transparent',
-    color: '#555f71',
+    color: 'var(--cy-secondary-text)',
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '14px',
     letterSpacing: '0.05em',
     fontWeight: 500,
     padding: '12px 24px',
     borderRadius: '4px',
-    border: '1.5px solid #d1d9d4',
+    border: '1.5px solid var(--cy-border)',
     cursor: 'pointer',
     textTransform: 'uppercase' as const,
     transition: 'background-color 0.2s ease',
+    minWidth: '120px',
   },
   /* sidebar */
   sidebar: { display: 'flex', flexDirection: 'column' as const, gap: '24px' },
   sideCard: {
-    backgroundColor: '#f3fbf6',
+    backgroundColor: 'var(--cy-surface)',
     borderRadius: '4px',
-    border: '1.5px solid #d1d9d4',
+    border: '1.5px solid var(--cy-border)',
     padding: '20px',
   },
   sideCardAlt: {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'var(--cy-surface-white)',
     borderRadius: '4px',
-    border: '1.5px solid #d1d9d4',
+    border: '1.5px solid var(--cy-border)',
     padding: '20px',
   },
   sideCardTitle: {
@@ -223,7 +227,7 @@ const S = {
     lineHeight: '20px',
     letterSpacing: '0.08em',
     fontWeight: 500,
-    color: '#161d1a',
+    color: 'var(--cy-text)',
     textTransform: 'uppercase' as const,
     marginBottom: '16px',
     display: 'flex',
@@ -237,19 +241,21 @@ const S = {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
-    color: '#3e4944',
+    color: 'var(--cy-text-secondary)',
   },
-  deviceDot: { width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#16856a', flexShrink: 0 },
+  deviceDot: { width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)', flexShrink: 0 },
   infoRow: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '4px 0',
-    borderBottom: '1.5px solid rgba(189,201,195,0.3)',
+    borderBottom: '1.5px solid var(--cy-border)',
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
-    color: '#3e4944',
+    color: 'var(--cy-text-secondary)',
+    flexWrap: 'wrap' as const,
+    gap: '4px',
   },
   infoRowLast: {
     display: 'flex',
@@ -259,12 +265,14 @@ const S = {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
-    color: '#3e4944',
+    color: 'var(--cy-text-secondary)',
+    flexWrap: 'wrap' as const,
+    gap: '4px',
   },
   qrCard: {
-    backgroundColor: '#f3fbf6',
+    backgroundColor: 'var(--cy-surface)',
     borderRadius: '4px',
-    border: '1.5px solid #d1d9d4',
+    border: '1.5px solid var(--cy-border)',
     padding: '20px',
     display: 'flex',
     flexDirection: 'column' as const,
@@ -277,21 +285,22 @@ const S = {
     fontSize: '14px',
     letterSpacing: '0.08em',
     fontWeight: 500,
-    color: '#161d1a',
+    color: 'var(--cy-text)',
     textTransform: 'uppercase' as const,
     textAlign: 'center' as const,
   },
   qrFrame: {
     width: '192px',
     height: '192px',
-    backgroundColor: '#ffffff',
-    border: '1.5px solid #d1d9d4',
+    backgroundColor: 'var(--cy-surface-white)',
+    border: '1.5px solid var(--cy-border)',
     padding: '8px',
+    maxWidth: '100%',
   },
   /* footer */
   footer: {
-    backgroundColor: '#eef5f0',
-    borderTop: '1.5px solid #bdc9c3',
+    backgroundColor: 'var(--cy-surface-container)',
+    borderTop: '1.5px solid var(--cy-border-strong)',
     width: '100%',
     padding: '32px 0',
     marginTop: 'auto',
@@ -308,10 +317,10 @@ const S = {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
-    color: '#555f71',
+    color: 'var(--cy-secondary-text)',
   },
   footerLink: {
-    color: '#3e4944',
+    color: 'var(--cy-text-secondary)',
     textDecoration: 'none',
     transition: 'color 0.2s ease',
   },
@@ -476,11 +485,6 @@ export default function RoomPage() {
         }
 
         let effectiveRole = payload.role
-        // If server says we're host, persist fingerprint. Otherwise, attempt
-        // a reclaim flow when local storage indicates this device was the
-        // original host (survives refresh). The reclaim endpoint will verify
-        // the fingerprint against the previous host presence entry and, if
-        // valid, reassign hostUid and return a new host token.
         if (effectiveRole === 'host') {
           setStoredHostFingerprint(roomId, fingerprintRef.current)
         } else if (getStoredHostFingerprint(roomId) === fingerprintRef.current) {
@@ -492,7 +496,6 @@ export default function RoomPage() {
             if (reclaimResp.ok) {
               const body = await reclaimResp.json().catch(() => ({}))
               if (body?.token) {
-                // Upgrade to host token and persist it in session cache.
                 payload = { ...payload, token: body.token, role: 'host' }
                 tokenRef.current = body.token
                 try {
@@ -617,11 +620,11 @@ export default function RoomPage() {
   if (!userName) {
     return (
       <Shell>
-        <div style={{ maxWidth: '360px', width: '100%', textAlign: 'center' }}>
-          <h1 style={{ fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '24px', fontWeight: 700, color: '#161d1a', marginBottom: '8px' }}>
+        <div style={{ maxWidth: '360px', width: '100%', textAlign: 'center', padding: '0 16px' }}>
+          <h1 style={{ fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '24px', fontWeight: 700, color: 'var(--cy-text)', marginBottom: '8px' }}>
             What&apos;s your name?
           </h1>
-          <p style={{ color: '#3e4944', marginBottom: '20px', fontSize: '14px' }}>
+          <p style={{ color: 'var(--cy-text-secondary)', marginBottom: '20px', fontSize: '14px' }}>
             Other people in this room will see this so they know it&apos;s you.
           </p>
           <input
@@ -637,11 +640,13 @@ export default function RoomPage() {
               padding: '12px 16px',
               marginBottom: '16px',
               borderRadius: '4px',
-              border: '1.5px solid #d1d9d4',
+              border: '1.5px solid var(--cy-border)',
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: '14px',
               outline: 'none',
               boxSizing: 'border-box' as const,
+              backgroundColor: 'var(--cy-surface-white)',
+              color: 'var(--cy-text)',
             }}
           />
           <button
@@ -661,7 +666,7 @@ export default function RoomPage() {
   if (status === 'loading') {
     return (
       <Shell>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', color: '#3e4944', letterSpacing: '0.05em' }}>
+        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', color: 'var(--cy-text-secondary)', letterSpacing: '0.05em' }}>
           CONNECTING TO ROOM…
         </div>
       </Shell>
@@ -671,18 +676,18 @@ export default function RoomPage() {
   if (status === 'error' || status === 'closed') {
     return (
       <Shell>
-        <div style={{ maxWidth: '400px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '400px', textAlign: 'center', padding: '0 16px' }}>
           <div style={{
             width: '48px', height: '48px', borderRadius: '50%',
-            backgroundColor: '#e8f0eb', display: 'grid', placeItems: 'center',
+            backgroundColor: 'var(--cy-surface-container-high)', display: 'grid', placeItems: 'center',
             margin: '0 auto 20px',
           }}>
-            <span className="material-symbols-outlined" style={{ color: '#6e7a74', fontSize: '20px' }}>wifi_off</span>
+            <span className="material-symbols-outlined" style={{ color: 'var(--cy-text-muted)', fontSize: '20px' }}>wifi_off</span>
           </div>
-          <h1 style={{ fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '24px', fontWeight: 700, color: '#161d1a', marginBottom: '12px' }}>
+          <h1 style={{ fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '24px', fontWeight: 700, color: 'var(--cy-text)', marginBottom: '12px' }}>
             Room unavailable
           </h1>
-          <p style={{ color: '#3e4944', marginBottom: '28px' }}>
+          <p style={{ color: 'var(--cy-text-secondary)', marginBottom: '28px' }}>
             {notice || 'This room was closed or no longer exists.'}
           </p>
           <button
@@ -704,10 +709,10 @@ export default function RoomPage() {
     <div style={S.page}>
 
       {/* ── Header ── */}
-      <div style={{ backgroundColor: '#f3fbf6', borderBottom: '1.5px solid #bdc9c3', position: 'sticky', top: 0, zIndex: 50 }}>
-        <header style={S.header}>
+      <div style={{ backgroundColor: 'var(--cy-surface)', borderBottom: '1.5px solid var(--cy-border-strong)', position: 'sticky', top: 0, zIndex: 50 }}>
+        <header className="cy-room-header" style={S.header}>
           {/* Left: logo + room badge + connected */}
-          <div style={S.headerLeft}>
+          <div className="cy-room-header-left">
             <button onClick={leave} style={{ ...S.logo, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               ClipYard
             </button>
@@ -718,32 +723,32 @@ export default function RoomPage() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ ...S.connectedDot, backgroundColor: isConnected ? '#16856a' : '#ba1a1a' }} />
+              <div style={{ ...S.connectedDot, backgroundColor: isConnected ? 'var(--cy-primary)' : 'var(--cy-error)' }} />
               <span style={S.connectedLabel}>{isConnected ? 'Connected' : 'Offline'}</span>
             </div>
           </div>
 
-          {/* Right: share */}
-          <button
-            id="share-btn"
-            onClick={shareRoom}
-            style={S.shareBtn}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#eef5f0')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>share</span>
-            {notice || 'SHARE'}
-          </button>
+          {/* Right: theme toggle + share */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <ThemeToggle />
+            <button
+              id="share-btn"
+              onClick={shareRoom}
+              style={S.shareBtn}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>share</span>
+              {notice || 'SHARE'}
+            </button>
+          </div>
         </header>
       </div>
 
       {/* ── Main grid ── */}
-      <main style={{
-        ...S.main,
-        gridTemplateColumns: 'repeat(12, 1fr)',
-      }}>
-        {/* Editor column — 8 cols */}
-        <div style={{ ...S.editorCol, gridColumn: 'span 8' }}>
+      <main className="cy-room-grid" style={S.main}>
+        {/* Editor column — 8 cols on desktop, full on mobile */}
+        <div className="cy-room-editor" style={S.editorCol}>
           {/* Textarea card */}
           <div style={S.editorCard}>
             <textarea
@@ -757,7 +762,7 @@ export default function RoomPage() {
             <div style={S.editorFooter}>
               <span>{charCount} CHARACTERS</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ ...S.syncedDot, backgroundColor: saved ? '#16856a' : '#e89c2a' }} />
+                <div style={{ ...S.syncedDot, backgroundColor: saved ? 'var(--cy-primary)' : 'var(--cy-warning)' }} />
                 <span style={{ textTransform: 'uppercase' }}>{saved ? 'Synced' : 'Saving…'}</span>
               </div>
             </div>
@@ -769,8 +774,8 @@ export default function RoomPage() {
               id="copy-clipboard-btn"
               onClick={copyClipboard}
               style={S.copyBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006a53')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#16856a')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-primary-hover)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-primary)')}
             >
               {copied ? '✓ COPIED' : 'COPY CLIPBOARD'}
             </button>
@@ -778,7 +783,7 @@ export default function RoomPage() {
               id="clear-btn"
               onClick={() => queueSave('')}
               style={S.clearBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#eef5f0')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               CLEAR
@@ -786,8 +791,8 @@ export default function RoomPage() {
           </div>
         </div>
 
-        {/* Sidebar — 4 cols */}
-        <div style={{ ...S.sidebar, gridColumn: 'span 4' }}>
+        {/* Sidebar — 4 cols on desktop, full on mobile */}
+        <div className="cy-room-sidebar" style={S.sidebar}>
 
           {/* Connected Devices */}
           <div style={S.sideCard}>
@@ -797,8 +802,8 @@ export default function RoomPage() {
                 <div style={S.deviceDot} />
                 <span>
                   {userName}
-                  <span style={{ color: '#6e7a74' }}> · {deviceLabelRef.current}</span>
-                  &nbsp;<span style={{ color: '#6e7a74' }}>({role === 'host' ? 'HOST' : 'YOU'})</span>
+                  <span style={{ color: 'var(--cy-text-muted)' }}> · {deviceLabelRef.current}</span>
+                  &nbsp;<span style={{ color: 'var(--cy-text-muted)' }}>({role === 'host' ? 'HOST' : 'YOU'})</span>
                 </span>
               </li>
               {serverDevices.length > 0
@@ -809,8 +814,8 @@ export default function RoomPage() {
                         <div style={S.deviceDot} />
                         <span>
                           {dev.name || `Participant ${idx + 2}`}
-                          {dev.deviceLabel ? <span style={{ color: '#6e7a74' }}> · {dev.deviceLabel}</span> : null}
-                          &nbsp;<span style={{ color: '#6e7a74' }}>({dev.role === 'host' ? 'HOST' : 'CONNECTED'})</span>
+                          {dev.deviceLabel ? <span style={{ color: 'var(--cy-text-muted)' }}> · {dev.deviceLabel}</span> : null}
+                          &nbsp;<span style={{ color: 'var(--cy-text-muted)' }}>({dev.role === 'host' ? 'HOST' : 'CONNECTED'})</span>
                         </span>
                       </li>
                     ))
@@ -818,7 +823,7 @@ export default function RoomPage() {
                     <li key={name} style={S.deviceItem}>
                       <div style={S.deviceDot} />
                       {name}&nbsp;
-                      <span style={{ color: '#6e7a74' }}>(CONNECTED)</span>
+                      <span style={{ color: 'var(--cy-text-muted)' }}>(CONNECTED)</span>
                     </li>
                   ))}
             </ul>
@@ -830,7 +835,7 @@ export default function RoomPage() {
                 background: 'none',
                 border: 'none',
                 padding: 0,
-                color: '#16856a',
+                color: 'var(--cy-primary)',
                 fontFamily: 'JetBrains Mono, monospace',
                 fontSize: '12px',
                 letterSpacing: '0.02em',
@@ -845,13 +850,13 @@ export default function RoomPage() {
           {/* Room Info */}
           <div style={S.sideCardAlt}>
             <h3 style={S.sideCardTitle}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: '#3e4944' }}>info</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)' }}>info</span>
               Room Info
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={S.infoRow}>
                 <span>ROOM:</span>
-                <span style={{ fontWeight: 700, color: '#161d1a' }}>{displayId}</span>
+                <span style={{ fontWeight: 700, color: 'var(--cy-text)' }}>{displayId}</span>
               </div>
               <div style={S.infoRow}>
                 <span>STATUS:</span>
@@ -859,7 +864,7 @@ export default function RoomPage() {
               </div>
               {/* <div style={S.infoRowLast}>
                 <span>LIFESPAN:</span>
-                <span style={{ color: '#95453b' }}>
+                <span style={{ color: 'var(--cy-lifespan)' }}>
                   {lifespanMs > 0
                     ? `EXPIRES IN ${String(Math.floor(lifespanMs / 60000)).padStart(2, '0')}:${String(
                         Math.floor((lifespanMs % 60000) / 1000),
@@ -871,45 +876,23 @@ export default function RoomPage() {
           </div>
 
           {/* QR Code */}
-          <div style={S.qrCard}>
-            <span style={S.qrTitle}>Scan to Join</span>
-            <div style={{ ...S.qrFrame, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {roomUrl ? (
-                <QRCodeSVG
-                  value={roomUrl}
-                  size={176}
-                  fgColor="#006a53"
-                  bgColor="#ffffff"
-                  level="M"
-                  style={{ width: '100%', height: '100%' }}
-                />
-              ) : (
-                <Image
-                  src="/qr-placeholder.png"
-                  alt="QR code to join this room"
-                  width={176}
-                  height={176}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-              )}
-            </div>
-          </div>
+          <QrCard roomUrl={roomUrl} />
 
         </div>
       </main>
 
       {/* ── Footer ── */}
       <footer style={S.footer}>
-        <div style={S.footerInner}>
+        <div className="cy-footer-inner" style={S.footerInner}>
           <span>© 2024 ClipYard Technical Systems</span>
-          <div style={{ display: 'flex', gap: '24px' }}>
+          <div className="cy-footer-links">
             {['Documentation', 'API Status', 'Privacy Protocol', 'GitHub'].map((label) => (
               <a
                 key={label}
                 href="#"
                 style={S.footerLink}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#006a53')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#3e4944')}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--cy-primary)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--cy-text-secondary)')}
               >
                 {label}
               </a>
@@ -921,13 +904,43 @@ export default function RoomPage() {
   )
 }
 
+/* ── QR Card extracted so it can access useTheme ── */
+function QrCard({ roomUrl }: { roomUrl: string }) {
+  const { theme } = useTheme()
+  return (
+    <div style={S.qrCard}>
+      <span style={S.qrTitle}>Scan to Join</span>
+      <div style={{ ...S.qrFrame, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {roomUrl ? (
+          <QRCodeSVG
+            value={roomUrl}
+            size={176}
+            fgColor={theme === 'dark' ? '#78d8b9' : '#006a53'}
+            bgColor={theme === 'dark' ? '#1c1c1c' : '#ffffff'}
+            level="M"
+            style={{ width: '100%', height: '100%' }}
+          />
+        ) : (
+          <Image
+            src="/qr-placeholder.png"
+            alt="QR code to join this room"
+            width={176}
+            height={176}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
 function Shell({ children }: { children: ReactNode }) {
   return (
     <main style={{
       display: 'grid',
       minHeight: '100vh',
       placeItems: 'center',
-      backgroundColor: '#f3fbf6',
+      backgroundColor: 'var(--cy-surface)',
       padding: '20px',
     }}>
       {children}

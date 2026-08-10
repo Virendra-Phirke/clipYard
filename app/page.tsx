@@ -38,7 +38,9 @@ export const metadata: Metadata = {
   },
 }
 
-const structuredData = getWebsiteStructuredData()
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 
 export default function Page() {
