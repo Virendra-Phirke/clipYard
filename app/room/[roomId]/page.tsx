@@ -333,6 +333,7 @@ export default function RoomPage() {
   const [copied, setCopied] = useState(false)
   const [userName, setUserName] = useState<string | null | undefined>(undefined)
   const [nameDraft, setNameDraft] = useState('')
+  const [lifespanMs, setLifespanMs] = useState<number>(PRESENCE_LIFESPAN_MS)
   const roomUrl = useMemo(() => getRoomUrl(roomId), [roomId])
   const fingerprintRef = useRef('')
   const deviceLabelRef = useRef('Browser')
@@ -342,8 +343,10 @@ export default function RoomPage() {
   const lastKnownUpdatedAtRef = useRef<number | undefined>(undefined)
   const saveTimerRef = useRef<number | null>(null)
   const heartbeatTimerRef = useRef<number | null>(null)
+  const lifespanTimerRef = useRef<number | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const presenceUnsubRef = useRef<(() => void) | null>(null)
+  const latestPresenceRef = useRef<Record<string, any>>({})
 
   const [serverDevices, setServerDevices] = useState<Device[]>([])
 
@@ -514,8 +517,9 @@ export default function RoomPage() {
         const unsubscribe = subscribeToRoomLive(roomId, handleLiveUpdate)
         const presenceUnsub = subscribeToRoomPresence(roomId, (presence) => {
           if (!alive) return
+          latestPresenceRef.current = presence || {}
           const now = Date.now()
-          const activeEntries = Object.entries(presence || {}).filter(([_, entry]) => {
+          const activeEntries = Object.entries(latestPresenceRef.current).filter(([_, entry]) => {
             const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
             return now - lastSeen < PRESENCE_LIFESPAN_MS
           })
@@ -537,8 +541,26 @@ export default function RoomPage() {
           unsubscribe()
           presenceUnsub()
           handleUnload()
+          if (lifespanTimerRef.current !== null) window.clearInterval(lifespanTimerRef.current)
         }
         presenceUnsubRef.current = presenceUnsub
+
+        lifespanTimerRef.current = window.setInterval(() => {
+          const now = Date.now()
+          const activeEntries = Object.entries(latestPresenceRef.current).filter(([_, entry]) => {
+            const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
+            return now - lastSeen < PRESENCE_LIFESPAN_MS
+          })
+          if (activeEntries.length > 0) {
+            const nextLifespan = Math.max(
+              0,
+              PRESENCE_LIFESPAN_MS - (now - Math.min(...activeEntries.map(([_, entry]) => entry.lastSeen || now))),
+            )
+            setLifespanMs(nextLifespan)
+          } else {
+            setLifespanMs(0)
+          }
+        }, 1000)
 
         heartbeatTimerRef.current = window.setInterval(() => {
           sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '')
@@ -848,7 +870,13 @@ export default function RoomPage() {
               </div>
               <div style={S.infoRowLast}>
                 <span>LIFESPAN:</span>
-                <span style={{ color: '#95453b' }}>EXPIRES IN 24:32</span>
+                <span style={{ color: '#95453b' }}>
+                  {lifespanMs > 0
+                    ? `EXPIRES IN ${String(Math.floor(lifespanMs / 60000)).padStart(2, '0')}:${String(
+                        Math.floor((lifespanMs % 60000) / 1000),
+                      ).padStart(2, '0')}`
+                    : 'EXPIRED'}
+                </span>
               </div>
             </div>
           </div>
