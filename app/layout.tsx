@@ -1,12 +1,10 @@
 import type { Metadata } from 'next'
+import { buildMetadata, SITE_META } from '@/lib/seo/config'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
 
-export const metadata: Metadata = {
-  title: 'ClipYard — Real-Time Text Transfer',
-  description:
-    'A temporary clipboard for moving text between your laptop, phone, and desktop. No account. No setup.',
-}
+export const metadata: Metadata = buildMetadata()
+export const viewport = { width: 'device-width', initialScale: 1 }
 
 export default function RootLayout({
   children,
