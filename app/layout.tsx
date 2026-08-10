@@ -1,11 +1,9 @@
 import type { Metadata } from 'next'
+import { buildMetadata, SITE_META } from '@/lib/seo/config'
 import './globals.css'
 
-export const metadata: Metadata = {
-  title: 'ClipYard — Real-Time Text Transfer',
-  description:
-    'A temporary clipboard for moving text between your laptop, phone, and desktop. No account. No setup.',
-}
+export const metadata: Metadata = buildMetadata()
+export const viewport = { width: 'device-width', initialScale: 1 }
 
 export default function RootLayout({
   children,
@@ -15,6 +13,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="light">
       <head>
+        <meta name="theme-color" content={SITE_META.themeColor} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link
