@@ -779,15 +779,17 @@ export default function RoomPage() {
             >
               {copied ? '✓ COPIED' : 'COPY CLIPBOARD'}
             </button>
-            <button
-              id="clear-btn"
-              onClick={() => queueSave('')}
-              style={S.clearBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              CLEAR
-            </button>
+            {role === 'host' && (
+              <button
+                id="clear-btn"
+                onClick={() => queueSave('')}
+                style={S.clearBtn}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                CLEAR
+              </button>
+            )}
           </div>
         </div>
 

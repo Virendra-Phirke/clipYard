@@ -74,6 +74,10 @@ export async function PATCH(request: Request, { params }: { params: { roomId: st
   const body = await request.json().catch(() => ({}))
   const nextText = sanitizeClipboard(typeof body.text === 'string' ? body.text : '')
 
+  if (nextText === '' && payload.role !== 'host') {
+    return NextResponse.json({ error: 'Only the host can clear the clipboard' }, { status: 403 })
+  }
+
   const { database } = getFirebaseAdmin()
   const roomSnapshot = await database.ref(`rooms/${roomId}/meta`).get()
   const meta = roomSnapshot.val()
