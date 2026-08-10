@@ -8,7 +8,10 @@
           ".read": "auth != null && auth.token.roomId === $roomId"
         },
         "presence": {
-          ".read": "auth != null && auth.token.roomId === $roomId"
+          ".read": "auth != null && auth.token.roomId === $roomId",
+          "$uid": {
+            ".write": "auth != null && auth.token.roomId === $roomId && auth.uid === $uid"
+          }
         },
         "clip": {
           ".read": "auth != null && auth.token.roomId === $roomId",
