@@ -4,27 +4,29 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  /* ── ClipYard brand colors ── */
-  --color-primary:                    #006a53;
+  /* ── ClipYard brand colors (Mapped to dynamic vars) ── */
+  --color-primary:                    var(--cy-primary);
+  --color-primary-foreground:         var(--cy-on-primary);
   --color-primary-container:          #16856a;
   --color-primary-fixed:              #94f5d4;
   --color-primary-fixed-dim:          #78d8b9;
-  --color-on-primary:                 #ffffff;
+  --color-on-primary:                 var(--cy-on-primary);
   --color-on-primary-container:       #fdfffc;
   --color-on-primary-fixed:           #002118;
   --color-on-primary-fixed-variant:   #00513f;
   --color-inverse-primary:            #78d8b9;
 
-  --color-secondary:                  #555f71;
+  --color-secondary:                  var(--cy-surface-container);
+  --color-secondary-foreground:       var(--cy-text-secondary);
   --color-secondary-container:        #d6e0f6;
   --color-secondary-fixed:            #d9e3f9;
   --color-secondary-fixed-dim:        #bdc7dc;
-  --color-on-secondary:               #ffffff;
+  --color-on-secondary:               var(--cy-text-secondary);
   --color-on-secondary-container:     #596376;
   --color-on-secondary-fixed:         #121c2c;
   --color-on-secondary-fixed-variant: #3d4759;
 
-  --color-tertiary:                   #95453b;
+  --color-tertiary:                   var(--cy-lifespan);
   --color-tertiary-container:         #b35d51;
   --color-tertiary-fixed:             #ffdad5;
   --color-tertiary-fixed-dim:         #ffb4a9;
@@ -33,31 +35,51 @@
   --color-on-tertiary-fixed:          #3e0503;
   --color-on-tertiary-fixed-variant:  #783026;
 
-  --color-surface:                    #f3fbf6;
-  --color-surface-dim:                #d4dcd7;
-  --color-surface-bright:             #f3fbf6;
-  --color-surface-container-lowest:   #ffffff;
-  --color-surface-container-low:      #eef5f0;
-  --color-surface-container:          #e8f0eb;
-  --color-surface-container-high:     #e2eae5;
-  --color-surface-container-highest:  #dce4df;
-  --color-surface-tint:               #006b54;
-  --color-surface-variant:            #dce4df;
-  --color-on-surface:                 #161d1a;
-  --color-on-surface-variant:         #3e4944;
+  --color-surface:                    var(--cy-surface);
+  --color-surface-dim:                var(--cy-surface-container);
+  --color-surface-bright:             var(--cy-surface-white);
+  --color-surface-container-lowest:   var(--cy-bg);
+  --color-surface-container-low:      var(--cy-surface-container);
+  --color-surface-container:          var(--cy-surface-container);
+  --color-surface-container-high:     var(--cy-surface-container-high);
+  --color-surface-container-highest:  var(--cy-surface-container-highest);
+  --color-surface-tint:               var(--cy-primary);
+  --color-surface-variant:            var(--cy-surface-container-highest);
+  --color-on-surface:                 var(--cy-text);
+  --color-on-surface-variant:         var(--cy-text-secondary);
   --color-inverse-surface:            #2a322f;
   --color-inverse-on-surface:         #ebf3ed;
 
-  --color-background:                 #f3fbf6;
-  --color-on-background:              #161d1a;
+  /* ── Shadcn UI and Base Variables ── */
+  --color-background:                 var(--cy-bg);
+  --color-foreground:                 var(--cy-text);
+  --color-on-background:              var(--cy-text);
 
-  --color-outline:                    #6e7a74;
-  --color-outline-variant:            #bdc9c3;
+  --color-card:                       var(--cy-surface-white);
+  --color-card-foreground:            var(--cy-text);
 
-  --color-error:                      #ba1a1a;
+  --color-popover:                    var(--cy-surface-white);
+  --color-popover-foreground:         var(--cy-text);
+
+  --color-muted:                      var(--cy-surface-container-high);
+  --color-muted-foreground:           var(--cy-text-muted);
+
+  --color-accent:                     var(--cy-surface-container-highest);
+  --color-accent-foreground:          var(--cy-text);
+
+  --color-border:                     var(--cy-border);
+  --color-input:                      var(--cy-border-strong);
+  --color-ring:                       var(--cy-primary);
+
+  --color-outline:                    var(--cy-border-strong);
+  --color-outline-variant:            var(--cy-border);
+
+  --color-error:                      var(--cy-error);
   --color-error-container:            #ffdad6;
-  --color-on-error:                   #ffffff;
+  --color-on-error:                   var(--cy-surface-white);
   --color-on-error-container:         #93000a;
+  --color-destructive:                var(--cy-error);
+  --color-destructive-foreground:     var(--cy-surface-white);
 
   /* ── Typography ── */
   --font-headline-lg:  "Hanken Grotesk", sans-serif;
@@ -311,4 +333,8 @@ html.dark ::-webkit-scrollbar-thumb {
 ::selection {
   background-color: var(--cy-primary);
   color: var(--cy-on-primary);
+}
+::view-transition-old(root), ::view-transition-new(root) {
+    animation:                    none;
+    mix-blend-mode:                    normal;
 }

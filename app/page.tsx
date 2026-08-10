@@ -37,14 +37,11 @@ export const metadata: Metadata = {
     images: [SITE_META.defaultOgImage],
   },
 }
-
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ThemeToggle } from "@/components/ThemeToggle";
+const structuredData = getWebsiteStructuredData()
 
 
 export default function Page() {
- 
+
   return (
     <>
     <script
