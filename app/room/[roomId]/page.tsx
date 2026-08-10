@@ -29,8 +29,10 @@ import {
   sendPresence,
   setStoredHostFingerprint,
   signInToFirebaseRoom,
-  subscribeToRoomLive,
+  setupRoomPresenceOnDisconnect,
+  subscribeToRoomClipUpdatedAt,
   subscribeToRoomPresence,
+  subscribeToRoomStatus,
 } from '@/services/room'
 import { getLocalFingerprint } from '@/services/fingerprint'
 import { PRESENCE_LIFESPAN_MS } from '@/lib/presence'
@@ -342,6 +344,7 @@ export default function RoomPage() {
   const [copied, setCopied] = useState(false)
   const [userName, setUserName] = useState<string | null | undefined>(undefined)
   const [nameDraft, setNameDraft] = useState('')
+  const [lifespanMs, setLifespanMs] = useState<number>(PRESENCE_LIFESPAN_MS)
   const roomUrl = useMemo(() => getRoomUrl(roomId), [roomId])
   const fingerprintRef = useRef('')
   const deviceLabelRef = useRef('Browser')
@@ -351,8 +354,9 @@ export default function RoomPage() {
   const lastKnownUpdatedAtRef = useRef<number | undefined>(undefined)
   const saveTimerRef = useRef<number | null>(null)
   const heartbeatTimerRef = useRef<number | null>(null)
+  const lifespanTimerRef = useRef<number | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
-  const presenceUnsubRef = useRef<(() => void) | null>(null)
+  const latestPresenceRef = useRef<Record<string, any>>({})
 
   const [serverDevices, setServerDevices] = useState<Device[]>([])
 
@@ -422,17 +426,13 @@ export default function RoomPage() {
       }
     }
 
-    async function handleLiveUpdate(state: RoomLiveState) {
+    function handlePresence(presence: Record<string, any>) {
       if (!alive) return
-      if (state.status === 'closed') {
-        clearStoredHostFingerprint(roomId)
-        clearCachedToken(roomId)
-        setStatus('closed')
-        return
-      }
-
       const now = Date.now()
-      const activeEntries = Object.entries(state.presence).filter(([_, entry]) => {
+      latestPresenceRef.current = presence || {}
+      const presenceEntries = Object.entries(presence || {})
+
+      const activeEntries = presenceEntries.filter(([_, entry]) => {
         const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
         return now - lastSeen < PRESENCE_LIFESPAN_MS
       })
@@ -448,15 +448,25 @@ export default function RoomPage() {
         })),
       )
       setConnection('connected')
+    }
 
-      if (state.updatedAt !== undefined) {
-        const previousUpdatedAt = lastKnownUpdatedAtRef.current
-        if (previousUpdatedAt !== undefined && state.updatedAt !== previousUpdatedAt) {
-          if (!dirtyRef.current) {
-            loadSnapshot().catch(() => undefined)
-          }
+    function handleClipUpdatedAt(updatedAt?: number) {
+      if (!alive) return
+      const previousUpdatedAt = lastKnownUpdatedAtRef.current
+      if (previousUpdatedAt !== undefined && updatedAt !== undefined && updatedAt !== previousUpdatedAt) {
+        if (!dirtyRef.current) {
+          loadSnapshot().catch(() => undefined)
         }
-        lastKnownUpdatedAtRef.current = state.updatedAt
+      }
+      lastKnownUpdatedAtRef.current = updatedAt
+    }
+
+    function handleStatus(status: 'open' | 'closed') {
+      if (!alive) return
+      if (status === 'closed') {
+        clearStoredHostFingerprint(roomId)
+        clearCachedToken(roomId)
+        setStatus('closed')
       }
     }
 
@@ -509,34 +519,40 @@ export default function RoomPage() {
         window.addEventListener('pagehide', handleUnload)
         window.addEventListener('beforeunload', handleUnload)
 
-        const unsubscribe = subscribeToRoomLive(roomId, handleLiveUpdate)
-        const presenceUnsub = subscribeToRoomPresence(roomId, (presence) => {
-          if (!alive) return
-          const now = Date.now()
-          const activeEntries = Object.entries(presence || {}).filter(([_, entry]) => {
-            const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
-            return now - lastSeen < PRESENCE_LIFESPAN_MS
-          })
-          setPeople(Math.max(1, activeEntries.length))
-          setServerDevices(
-            activeEntries.map(([sid, entry]) => ({
-              sid,
-              fingerprint: entry.fingerprint || sid,
-              name: entry.name || (entry.role === 'host' ? 'Host' : 'Participant'),
-              deviceLabel: entry.deviceLabel || 'Browser',
-              role: entry.role || 'participant',
-            })),
-          )
-        })
+        const cleanupPresenceOnDisconnect = setupRoomPresenceOnDisconnect(roomId)
+        const presenceUnsubscribe = subscribeToRoomPresence(roomId, handlePresence)
+        const statusUnsubscribe = subscribeToRoomStatus(roomId, handleStatus)
+        const clipUnsubscribe = subscribeToRoomClipUpdatedAt(roomId, handleClipUpdatedAt)
 
         cleanupRef.current = () => {
           window.removeEventListener('pagehide', handleUnload)
           window.removeEventListener('beforeunload', handleUnload)
-          unsubscribe()
-          presenceUnsub()
+          presenceUnsubscribe()
+          statusUnsubscribe()
+          clipUnsubscribe()
+          cleanupPresenceOnDisconnect()
           handleUnload()
+          if (lifespanTimerRef.current !== null) window.clearInterval(lifespanTimerRef.current)
         }
-        presenceUnsubRef.current = presenceUnsub
+
+        setConnection('connected')
+
+        lifespanTimerRef.current = window.setInterval(() => {
+          const now = Date.now()
+          const activeEntries = Object.entries(latestPresenceRef.current).filter(([_, entry]) => {
+            const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
+            return now - lastSeen < PRESENCE_LIFESPAN_MS
+          })
+          if (activeEntries.length > 0) {
+            const nextLifespan = Math.max(
+              0,
+              PRESENCE_LIFESPAN_MS - (now - Math.min(...activeEntries.map(([_, entry]) => entry.lastSeen || now))),
+            )
+            setLifespanMs(nextLifespan)
+          } else {
+            setLifespanMs(0)
+          }
+        }, 1000)
 
         heartbeatTimerRef.current = window.setInterval(() => {
           sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '')
@@ -846,10 +862,16 @@ export default function RoomPage() {
                 <span>STATUS:</span>
                 <span>{people} DEVICE{people !== 1 ? 'S' : ''} CONNECTED</span>
               </div>
-              <div style={S.infoRowLast}>
+              {/* <div style={S.infoRowLast}>
                 <span>LIFESPAN:</span>
-                <span style={{ color: 'var(--cy-lifespan)' }}>EXPIRES IN 24:32</span>
-              </div>
+                <span style={{ color: 'var(--cy-lifespan)' }}>
+                  {lifespanMs > 0
+                    ? `EXPIRES IN ${String(Math.floor(lifespanMs / 60000)).padStart(2, '0')}:${String(
+                        Math.floor((lifespanMs % 60000) / 1000),
+                      ).padStart(2, '0')}`
+                    : 'EXPIRED'}
+                </span>
+              </div> */}
             </div>
           </div>
 
