@@ -1,85 +1,89 @@
 # ClipYard
 
-ClipYard is a realtime clipboard sharing app built with Next.js App Router, Firebase Realtime Database, and Firebase custom authentication.
-
-It allows one user to create a temporary room, share the room code or link, and instantly share encrypted clipboard text and presence updates across connected devices.
+ClipYard is a realtime clipboard-sharing app built with Next.js App Router and Firebase Realtime Database. It is designed to create temporary rooms, share short room codes, and securely sync encrypted clipboard text and presence data across connected devices.
 
 ## Features
 
 - Create or join a temporary room with an 8-character code
-- Realtime presence and participant list updates via Firebase Realtime Database
-- Realtime clipboard sync across devices
-- Server-side clipboard text encryption using AES-GCM
-- Firebase custom auth tokens to restrict database access to one room
-- Host/participant role handling with room ownership reclaim support
-- Client-side room connection and heartbeat logic
+- Realtime participant presence, device list, and clipboard updates
+- Server-side encrypted clipboard storage using AES-GCM
+- Firebase custom auth tokens scoped to a single room
+- Host/participant role model with reclaim and room close logic
+- Realtime Database read-only client access; all writes go through trusted server APIs
+- Room heartbeat, disconnect cleanup, and client-side reconnect handling
 
-## Tech Stack
+## Architecture
 
-- Next.js 16 (App Router)
-- React 19
-- Firebase Realtime Database
-- Firebase Auth custom tokens
-- Firebase Admin SDK for server-side token minting and database writes
-- TypeScript
-- Tailwind CSS / inline styles for UI
+### Client
 
-## Getting Started
+- Next.js App Router pages render the landing page and room UI.
+- `app/room/[roomId]/page.tsx` handles room join flow, Firebase sign-in, presence heartbeat, and realtime subscriptions.
+- `services/room.ts` contains client-side APIs and Firebase RTDB listener helpers.
+- `lib/firebase-client.ts` initializes Firebase and signs in with a custom token.
 
-### Prerequisites
+### Server
 
-- Node.js 20+ / pnpm 11+
-- Firebase project with Realtime Database enabled
-- Firebase service account credentials
+- `app/api/rooms/join/route.ts` creates room join responses and returns:
+  - a server JWT for room API access
+  - a Firebase custom auth token for realtime DB reads
+- `app/api/rooms/[roomId]/route.ts` handles:
+  - room snapshot fetches
+  - presence heartbeats
+  - clipboard writes
+  - leave / host close actions
+- `lib/firebase-admin.ts` initializes Firebase Admin and mints custom auth tokens.
+- `lib/room-token.ts` signs and verifies server JWTs used for internal API authorization.
+- `lib/room-data.ts` encrypts and decrypts clipboard text using AES-GCM and a server-side secret.
 
-### Install dependencies
+## Security Model
 
-```bash
-pnpm install
-```
+ClipYard is built with a defense-in-depth approach. The main protections are:
 
-### Environment variables
+### 1. Firebase custom auth tokens scoped by room
 
-Create a `.env.local` file at the repository root with the following values:
+- Every client joins a room by requesting a server endpoint.
+- The server returns a Firebase custom token containing `roomId` in the token claims.
+- The client signs into Firebase Auth with that custom token.
+- Realtime Database rules allow reads only when `auth.token.roomId === $roomId`.
 
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_project.firebaseio.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+This enforces that a client can only observe realtime data for the room it was granted access to.
 
-FIREBASE_PROJECT_ID=your_project_id
-FIREBASE_CLIENT_EMAIL=your_service_account_email
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+### 2. Read-only RTDB client access
 
-JWT_SECRET=your_jwt_secret
-ROOM_DATA_SECRET=your_room_data_secret
-```
+- Client-side realtime listeners only read from the database.
+- Clients never write directly to Firebase RTDB.
+- All database writes are performed by server API routes behind JWT validation.
 
-> Note: `FIREBASE_PRIVATE_KEY` must preserve newlines as `\n` when stored in `.env.local`.
+This means the realtime DB rules can safely deny write access at the root room path.
 
-### Run locally
+### 3. Server API authorization with JWT room tokens
 
-```bash
-pnpm dev
-```
+- The server uses a separate signed JWT for internal API access (`lib/room-token.ts`).
+- API routes verify this token for every request.
+- Each token includes:
+  - `roomId`
+  - `role` (`host` or `participant`)
+  - `sid` (session identifier)
+- The token is valid for a limited window (24h) and is used for presence, saving text, leaving, and closing the room.
 
-Open `http://localhost:3000` in your browser.
+### 4. Encrypted clipboard storage
 
-## Firebase Setup
+- Clipboard text is encrypted server-side using AES-GCM before it is written to Firebase.
+- The encryption key is never sent to the client.
+- Decryption is performed only by the trusted server snapshot endpoint.
 
-1. Create a Firebase project.
-2. Enable Realtime Database in test or locked mode.
-3. Create a service account and download the JSON credentials.
-4. Set `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` from the service account.
-5. Ensure the Realtime Database URL is set in `NEXT_PUBLIC_FIREBASE_DATABASE_URL` and `NEXT_PUBLIC_FIREBASE_PROJECT_ID`.
+This prevents plaintext clipboard data from being stored directly in the database.
 
-## Database Rules
+### 5. Environment secrets and key handling
 
-The app uses room-level auth via custom Firebase tokens. Realtime Database rules should allow reads only when the client is authenticated and the token contains the correct room claim:
+- Keep `FIREBASE_PRIVATE_KEY`, `JWT_SECRET`, and `ROOM_DATA_SECRET` out of source control.
+- Use `.env.local` for local development and secure environment variables in deployment.
+- `ROOM_DATA_SECRET` is the key used for clipboard encryption.
+- `JWT_SECRET` is the key used to sign room-auth JWTs.
+
+### 6. Realtime Database rules
+
+Use the following rule set to limit access to the allowed room and read-only children:
 
 ```json
 {
@@ -106,43 +110,169 @@ The app uses room-level auth via custom Firebase tokens. Realtime Database rules
 }
 ```
 
+#### Why this rule set?
+
+- `auth != null && auth.token.roomId === $roomId` ensures only authenticated clients with the correct room claim can read.
+- `.write: false` prevents any client-side writes to the room subtree.
+- Explicit child rules keep the security model clear and narrow.
+
+### 7. Presence and disconnect handling
+
+- Clients send presence updates through a server endpoint.
+- The Firebase RTDB `presence` node is readable by clients but not writable.
+- The app registers an RTDB `onDisconnect.remove()` entry for each client to clean up stale presence.
+- Presence is treated as active only when `lastSeen` is within the configured lifespan.
+
+### 8. Host reclaim and room closing
+
+- The host is initially created with a trusted `hostUid` and room token.
+- If the host reconnects from the same fingerprint, the app can reclaim host ownership.
+- Only the host can close the room, and the close action is protected by server-side role validation.
+
+## Setup
+
+### Required environment variables
+
+Create `.env.local` with:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_DATABASE_URL=https://your_project.firebaseio.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your_service_account_email
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+JWT_SECRET=your_jwt_secret
+ROOM_DATA_SECRET=your_room_data_secret
+```
+
+### Important security notes
+
+- Do not commit `.env.local` to version control.
+- Use a secure, random value for `JWT_SECRET` and `ROOM_DATA_SECRET`.
+- The `FIREBASE_PRIVATE_KEY` value must preserve literal `\n` sequences so the key parses correctly.
+- In production, secure environment variables with your deployment platform.
+
+### Firebase setup
+
+1. Create a Firebase project.
+2. Enable Realtime Database.
+3. Create a service account and download the JSON credentials.
+4. Set the service account values in `.env.local`.
+5. Deploy Realtime Database rules from `database.rules.json` or paste them into the Firebase console.
+
+## Running locally
+
+Install dependencies:
+
+```bash
+pnpm install
+```
+
+Start the dev server:
+
+```bash
+pnpm dev
+```
+
+Open `http://localhost:3000`.
+
+## Deployment
+
+For production deployment:
+
+- Build with `pnpm build`
+- Start with `pnpm start`
+- Ensure server-side env vars are configured securely
+- Ensure Firebase rules are deployed before the app goes live
+
 ## Project Structure
 
-- `app/` - Next.js App Router pages and API routes
-- `services/room.ts` - client room API, realtime subscriptions, token caching, presence logic
-- `lib/firebase-client.ts` - Firebase client initialization and custom sign-in
-- `lib/firebase-admin.ts` - Firebase admin initialization and custom token minting
-- `lib/room-token.ts` - JWT room token issuance and verification
-- `lib/room-data.ts` - clipboard text encryption/decryption helpers
-- `lib/presence.ts` - shared presence heartbeat configuration
-- `database.rules.json` - recommended Realtime Database security rules
+- `app/` — Next.js App Router user-facing pages and API endpoints
+  - `app/page.tsx` — landing page and room creation/join UI
+  - `app/room/[roomId]/page.tsx` — room UI, auth flow, realtime listeners, and presence logic
+  - `app/api/rooms/join/route.ts` — room join endpoint returning auth tokens
+  - `app/api/rooms/[roomId]/route.ts` — room snapshot, presence, clipboard, and leave endpoints
+- `services/room.ts` — browser-side room client helper library
+- `lib/firebase-client.ts` — Firebase client initialization and custom token sign-in
+- `lib/firebase-admin.ts` — Firebase Admin initialization and custom token minting
+- `lib/room-token.ts` — JWT room token creation and verification
+- `lib/room-data.ts` — encrypted clipboard text helpers
+- `lib/presence.ts` — presence TTL configuration values
+- `database.rules.json` — recommended RTDB security rules
 
-## Usage
+## API Behavior
 
-- Create a room from the landing page.
-- Enter your display name when prompted.
-- Share the room link or room code with another device.
-- Text updates are saved to the room and synced using realtime listeners.
-- Presence is maintained by a heartbeat POST endpoint and cleaned up on disconnect.
+### `POST /api/rooms/join`
 
-## Useful Scripts
+- Input: `{ roomId, fingerprint, name, deviceLabel, visitorId }`
+- Output: `{ roomId, token, firebaseToken, role }`
+- Returns a server JWT and Firebase custom auth token.
+- Only valid when the room exists and is open.
 
-- `pnpm dev` - start development server
-- `pnpm build` - build production app
-- `pnpm start` - run production server
-- `pnpm lint` - run ESLint
+### `GET /api/rooms/:roomId`
 
-## Notes
+- Auth: bearer JWT or `token` query parameter
+- Returns decrypted clipboard text, room status, active people count, and devices.
+- The server verifies the room JWT before responding.
 
-- The app stores temporary room tokens in `sessionStorage` and host fingerprint state in `localStorage`.
-- Encrypted clipboard text is decrypted server-side and never exposed in plaintext outside the room snapshot API.
-- Presence entries use a short lifespan and are refreshed every few seconds.
+### `POST /api/rooms/:roomId`
+
+- Auth: bearer JWT or `token` query parameter
+- Records presence with `lastSeen`, `role`, `name`, `deviceLabel`, and `fingerprint`.
+- Uses server-side Firebase Admin SDK to update RTDB.
+
+### `PATCH /api/rooms/:roomId`
+
+- Auth: bearer JWT or `token` query parameter
+- Encrypts clipboard text and updates `rooms/:roomId/clip` with `text`, `updatedAt`, and `updatedBy`.
+
+### `DELETE /api/rooms/:roomId`
+
+- Auth: bearer JWT or `token` query parameter
+- Without `x-close-room`: deletes only the caller presence entry.
+- With `x-close-room: 1`: host-only room closure removes the entire room.
+
+## Security Checklist
+
+- [x] Custom Firebase auth tokens scoped by `roomId`
+- [x] RTDB read-only access from client side
+- [x] All writes mediated by server API with JWT auth
+- [x] Encrypted clipboard storage server-side
+- [x] Presence cleanup via `onDisconnect`
+- [x] Room close protected by host role
+- [x] Environment secrets kept outside source control
 
 ## Troubleshooting
 
-- If the app cannot connect to Firebase, verify all `NEXT_PUBLIC_FIREBASE_*` and server-side Firebase env vars.
-- If realtime updates fail, confirm the Realtime Database rules are deployed and the auth token includes `roomId`.
-- For host reclaim and room ownership, ensure the same browser fingerprint value is available.
+### Firebase auth fails
+
+- Confirm `NEXT_PUBLIC_FIREBASE_*` values are correct.
+- Confirm `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, and `FIREBASE_PRIVATE_KEY` are set.
+- Confirm the service account has Realtime Database access.
+
+### Realtime listeners do not receive updates
+
+- Confirm the Firebase DB rules have been deployed.
+- Confirm the client signed in with a custom token containing `roomId`.
+- Confirm `database.rules.json` matches the production rules.
+
+### Room snapshot API returns unauthorized
+
+- Confirm the room JWT is included in the request via `Authorization: Bearer <token>` or `?token=<token>`.
+- Confirm the token has the correct `roomId` claim.
+
+## Notes
+
+- `sessionStorage` holds temporary room join tokens for the browser session.
+- `localStorage` is used only for host fingerprint persistence and local display info.
+- The clipboard text encryption key is derived server-side from `ROOM_DATA_SECRET`.
+- The app is intentionally designed to avoid exposing decrypted text in the database.
 
 ## License
 
