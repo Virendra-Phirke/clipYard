@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Page() {
   const router = useRouter();
@@ -52,8 +53,8 @@ export default function Page() {
       {/* ── Top Nav Bar ── */}
       <header
         style={{
-          backgroundColor: "#f3fbf6",
-          borderBottom: "1px solid #bdc9c3",
+          backgroundColor: "var(--cy-surface)",
+          borderBottom: "1px solid var(--cy-border-strong)",
           position: "sticky",
           top: 0,
           zIndex: 50,
@@ -77,27 +78,28 @@ export default function Page() {
               lineHeight: "32px",
               letterSpacing: "-0.01em",
               fontWeight: 700,
-              color: "#006a53",
+              color: "var(--cy-primary-text)",
             }}
           >
             ◈ ClipYard
           </div>
-          <nav style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+          <nav className="cy-nav-links">
             <a
               href="#how-it-works"
               style={{
                 fontFamily: "Hanken Grotesk, sans-serif",
                 fontSize: "16px",
                 lineHeight: "24px",
-                color: "#3e4944",
+                color: "var(--cy-text-secondary)",
                 textDecoration: "none",
                 transition: "color 0.2s ease",
               }}
               onMouseEnter={(e) =>
-                ((e.target as HTMLElement).style.color = "#006a53")
+                ((e.target as HTMLElement).style.color = "var(--cy-primary)")
               }
               onMouseLeave={(e) =>
-                ((e.target as HTMLElement).style.color = "#3e4944")
+                ((e.target as HTMLElement).style.color =
+                  "var(--cy-text-secondary)")
               }
             >
               How it works
@@ -110,31 +112,33 @@ export default function Page() {
                 fontFamily: "Hanken Grotesk, sans-serif",
                 fontSize: "16px",
                 lineHeight: "24px",
-                color: "#3e4944",
+                color: "var(--cy-text-secondary)",
                 textDecoration: "none",
                 transition: "color 0.2s ease",
               }}
               onMouseEnter={(e) =>
-                ((e.target as HTMLElement).style.color = "#006a53")
+                ((e.target as HTMLElement).style.color = "var(--cy-primary)")
               }
               onMouseLeave={(e) =>
-                ((e.target as HTMLElement).style.color = "#3e4944")
+                ((e.target as HTMLElement).style.color =
+                  "var(--cy-text-secondary)")
               }
             >
               GitHub
             </a>
+            <ThemeToggle />
           </nav>
         </div>
       </header>
 
       {/* ── Main Canvas ── */}
       <main
+        className="cy-hero-main"
         style={{
           flexGrow: 1,
           width: "100%",
           maxWidth: "1280px",
           margin: "0 auto",
-          padding: "64px 32px",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -156,7 +160,7 @@ export default function Page() {
               lineHeight: "20px",
               letterSpacing: "0.1em",
               fontWeight: 500,
-              color: "#16856a",
+              color: "var(--cy-primary)",
               textTransform: "uppercase",
               marginBottom: "16px",
             }}
@@ -167,11 +171,11 @@ export default function Page() {
           <h1
             style={{
               fontFamily: "Hanken Grotesk, sans-serif",
-              fontSize: "clamp(32px, 5vw, 48px)",
+              fontSize: "clamp(28px, 5vw, 48px)",
               lineHeight: "1.15",
               letterSpacing: "-0.02em",
               fontWeight: 700,
-              color: "#161d1a",
+              color: "var(--cy-text)",
               marginBottom: "24px",
             }}
           >
@@ -183,7 +187,7 @@ export default function Page() {
               fontFamily: "Hanken Grotesk, sans-serif",
               fontSize: "18px",
               lineHeight: "28px",
-              color: "#3e4944",
+              color: "var(--cy-text-secondary)",
               marginBottom: "40px",
             }}
           >
@@ -206,26 +210,27 @@ export default function Page() {
               onClick={createRoom}
               disabled={loading}
               style={{
-                backgroundColor: "#16856a",
-                color: "#fdfffc",
+                backgroundColor: "var(--cy-primary)",
+                color: "var(--cy-on-primary)",
                 fontFamily: "Hanken Grotesk, sans-serif",
                 fontSize: "16px",
                 lineHeight: "24px",
                 fontWeight: 600,
                 padding: "12px 24px",
                 borderRadius: "4px",
-                border: "1.5px solid #d1d9d4",
+                border: "1.5px solid var(--cy-border)",
                 cursor: loading ? "not-allowed" : "pointer",
                 opacity: loading ? 0.7 : 1,
                 transition: "background-color 0.2s ease",
               }}
               onMouseEnter={(e) => {
                 if (!loading)
-                  (e.currentTarget.style.backgroundColor) = "#006a53";
+                  e.currentTarget.style.backgroundColor =
+                    "var(--cy-primary-hover)";
               }}
               onMouseLeave={(e) => {
                 if (!loading)
-                  (e.currentTarget.style.backgroundColor) = "#16856a";
+                  e.currentTarget.style.backgroundColor = "var(--cy-primary)";
               }}
             >
               {loading ? "Creating…" : "Create Clipboard →"}
@@ -235,7 +240,7 @@ export default function Page() {
               style={{
                 fontFamily: "Hanken Grotesk, sans-serif",
                 fontSize: "16px",
-                color: "#3e4944",
+                color: "var(--cy-text-secondary)",
               }}
             >
               or
@@ -245,12 +250,13 @@ export default function Page() {
             <form
               onSubmit={joinRoom}
               style={{
-                backgroundColor: "#ffffff",
-                border: "1.5px solid #d1d9d4",
+                backgroundColor: "var(--cy-surface-white)",
+                border: "1.5px solid var(--cy-border)",
                 borderRadius: "4px",
                 padding: "8px",
                 display: "flex",
                 alignItems: "center",
+                flexWrap: "wrap",
               }}
             >
               <span
@@ -260,9 +266,9 @@ export default function Page() {
                   lineHeight: "20px",
                   letterSpacing: "0.02em",
                   fontWeight: 500,
-                  color: "#3e4944",
+                  color: "var(--cy-text-secondary)",
                   padding: "0 12px",
-                  borderRight: "1px solid #d1d9d4",
+                  borderRight: "1px solid var(--cy-border)",
                   marginRight: "8px",
                   whiteSpace: "nowrap",
                 }}
@@ -286,7 +292,8 @@ export default function Page() {
                   border: "none",
                   padding: "8px",
                   width: "128px",
-                  color: "#161d1a",
+                  minWidth: "80px",
+                  color: "var(--cy-text)",
                   outline: "none",
                 }}
               />
@@ -297,7 +304,7 @@ export default function Page() {
                   fontSize: "14px",
                   letterSpacing: "0.02em",
                   fontWeight: 500,
-                  color: "#16856a",
+                  color: "var(--cy-primary)",
                   background: "none",
                   border: "none",
                   padding: "0 12px",
@@ -305,10 +312,10 @@ export default function Page() {
                   transition: "color 0.2s ease",
                 }}
                 onMouseEnter={(e) =>
-                  ((e.currentTarget.style.color) = "#006a53")
+                  (e.currentTarget.style.color = "var(--cy-primary-hover)")
                 }
                 onMouseLeave={(e) =>
-                  ((e.currentTarget.style.color) = "#16856a")
+                  (e.currentTarget.style.color = "var(--cy-primary)")
                 }
               >
                 Join →
@@ -323,7 +330,7 @@ export default function Page() {
                 marginTop: "12px",
                 fontFamily: "JetBrains Mono, monospace",
                 fontSize: "13px",
-                color: "#ba1a1a",
+                color: "var(--cy-error)",
               }}
             >
               {error}
@@ -337,10 +344,10 @@ export default function Page() {
             width: "100%",
             maxWidth: "896px",
             marginBottom: "128px",
-            backgroundColor: "#ffffff",
-            border: "1.5px solid #d1d9d4",
+            backgroundColor: "var(--cy-surface-white)",
+            border: "1.5px solid var(--cy-border)",
             borderRadius: "4px",
-            boxShadow: "0 1px 2px 0 rgba(0,0,0,0.05)",
+            boxShadow: `0 1px 2px 0 var(--cy-shadow)`,
           }}
         >
           {/* Panel Header */}
@@ -350,18 +357,22 @@ export default function Page() {
               justifyContent: "space-between",
               alignItems: "center",
               padding: "12px 24px",
-              borderBottom: "1.5px solid #d1d9d4",
-              backgroundColor: "#f3fbf6",
+              borderBottom: "1.5px solid var(--cy-border)",
+              backgroundColor: "var(--cy-surface)",
               borderRadius: "4px 4px 0 0",
+              flexWrap: "wrap",
+              gap: "8px",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            >
               <div
                 style={{
                   width: "8px",
                   height: "8px",
                   borderRadius: "50%",
-                  backgroundColor: "#16856a",
+                  backgroundColor: "var(--cy-primary)",
                 }}
               />
               <span
@@ -371,7 +382,7 @@ export default function Page() {
                   lineHeight: "20px",
                   letterSpacing: "0.05em",
                   fontWeight: 500,
-                  color: "#161d1a",
+                  color: "var(--cy-text)",
                   textTransform: "uppercase",
                 }}
               >
@@ -383,11 +394,11 @@ export default function Page() {
                 fontFamily: "JetBrains Mono, monospace",
                 fontSize: "13px",
                 lineHeight: "18px",
-                backgroundColor: "#e8f0eb",
+                backgroundColor: "var(--cy-surface-container-high)",
                 padding: "4px 12px",
                 borderRadius: "2px",
-                border: "1.5px solid #d1d9d4",
-                color: "#3e4944",
+                border: "1.5px solid var(--cy-border)",
+                color: "var(--cy-text-secondary)",
               }}
             >
               ID: K7Q9-X2MP
@@ -399,7 +410,7 @@ export default function Page() {
             style={{
               padding: "24px",
               height: "256px",
-              backgroundColor: "#ffffff",
+              backgroundColor: "var(--cy-surface-white)",
               position: "relative",
             }}
           >
@@ -416,7 +427,7 @@ export default function Page() {
                 fontFamily: "JetBrains Mono, monospace",
                 fontSize: "13px",
                 lineHeight: "18px",
-                color: "#161d1a",
+                color: "var(--cy-text)",
                 padding: 0,
               }}
             />
@@ -431,8 +442,8 @@ export default function Page() {
                 position: "absolute",
                 bottom: "24px",
                 right: "24px",
-                backgroundColor: "#e2eae5",
-                border: "1.5px solid #d1d9d4",
+                backgroundColor: "var(--cy-surface-container-highest)",
+                border: "1.5px solid var(--cy-border)",
                 borderRadius: "2px",
                 padding: "8px",
                 cursor: "pointer",
@@ -442,13 +453,18 @@ export default function Page() {
                 transition: "background-color 0.2s ease",
               }}
               onMouseEnter={(e) =>
-                ((e.currentTarget.style.backgroundColor) = "#e8f0eb")
+                (e.currentTarget.style.backgroundColor =
+                  "var(--cy-surface-container-high)")
               }
               onMouseLeave={(e) =>
-                ((e.currentTarget.style.backgroundColor) = "#e2eae5")
+                (e.currentTarget.style.backgroundColor =
+                  "var(--cy-surface-container-highest)")
               }
             >
-              <span className="material-symbols-outlined" style={{ color: "#3e4944", fontSize: "20px" }}>
+              <span
+                className="material-symbols-outlined"
+                style={{ color: "var(--cy-text-secondary)", fontSize: "20px" }}
+              >
                 content_copy
               </span>
             </button>
@@ -458,15 +474,17 @@ export default function Page() {
           <div
             style={{
               padding: "12px 24px",
-              borderTop: "1.5px solid #d1d9d4",
-              backgroundColor: "#f3fbf6",
+              borderTop: "1.5px solid var(--cy-border)",
+              backgroundColor: "var(--cy-surface)",
               borderRadius: "0 0 4px 4px",
               fontFamily: "JetBrains Mono, monospace",
               fontSize: "13px",
               lineHeight: "18px",
-              color: "#3e4944",
+              color: "var(--cy-text-secondary)",
               display: "flex",
               justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "8px",
             }}
           >
             <span>248 CHARACTERS</span>
@@ -477,19 +495,16 @@ export default function Page() {
         {/* ── How It Works & Utility Highlights ── */}
         <div
           id="how-it-works"
+          className="cy-features-grid"
           style={{
-            width: "100%",
             maxWidth: "1024px",
-            display: "grid",
-            gridTemplateColumns: "repeat(12, 1fr)",
-            gap: "24px",
             marginBottom: "80px",
           }}
         >
-          {/* How It Works – 8 cols */}
+          {/* How It Works – 8 cols on desktop, full on mobile */}
           <section
+            className="cy-features-main"
             style={{
-              gridColumn: "span 8",
               display: "flex",
               flexWrap: "wrap",
               gap: "24px",
@@ -514,7 +529,11 @@ export default function Page() {
             ].map((step) => (
               <div
                 key={step.num}
-                style={{ flex: "1 1 160px", display: "flex", flexDirection: "column" }}
+                style={{
+                  flex: "1 1 160px",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
               >
                 <span
                   style={{
@@ -522,7 +541,7 @@ export default function Page() {
                     fontSize: "14px",
                     letterSpacing: "0.02em",
                     fontWeight: 500,
-                    color: "#16856a",
+                    color: "var(--cy-primary)",
                     marginBottom: "8px",
                   }}
                 >
@@ -532,7 +551,7 @@ export default function Page() {
                   style={{
                     height: "1.5px",
                     width: "100%",
-                    backgroundColor: "#d1d9d4",
+                    backgroundColor: "var(--cy-border)",
                     marginBottom: "16px",
                   }}
                 />
@@ -542,7 +561,7 @@ export default function Page() {
                     fontSize: "16px",
                     lineHeight: "24px",
                     fontWeight: 600,
-                    color: "#161d1a",
+                    color: "var(--cy-text)",
                     marginBottom: "4px",
                   }}
                 >
@@ -553,7 +572,7 @@ export default function Page() {
                     fontFamily: "Hanken Grotesk, sans-serif",
                     fontSize: "14px",
                     lineHeight: "20px",
-                    color: "#3e4944",
+                    color: "var(--cy-text-secondary)",
                   }}
                 >
                   {step.desc}
@@ -562,16 +581,16 @@ export default function Page() {
             ))}
           </section>
 
-          {/* Utility Highlights – 4 cols */}
+          {/* Utility Highlights – 4 cols on desktop, full on mobile */}
           <section
+            className="cy-features-side"
             style={{
-              gridColumn: "span 4",
               display: "flex",
               flexDirection: "column",
               gap: "12px",
               justifyContent: "center",
               paddingLeft: "32px",
-              borderLeft: "1px solid #d1d9d4",
+              borderLeft: "1px solid var(--cy-border)",
             }}
           >
             {[
@@ -579,10 +598,17 @@ export default function Page() {
               "REAL-TIME WEBSOCKET SYNC",
               "E2E ENCRYPTION OPTION",
             ].map((item) => (
-              <div key={item} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                key={item}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                }}
+              >
                 <span
                   className="material-symbols-outlined"
-                  style={{ color: "#16856a", fontSize: "16px" }}
+                  style={{ color: "var(--cy-primary)", fontSize: "16px" }}
                 >
                   check_circle
                 </span>
@@ -591,7 +617,7 @@ export default function Page() {
                     fontFamily: "JetBrains Mono, monospace",
                     fontSize: "13px",
                     lineHeight: "18px",
-                    color: "#161d1a",
+                    color: "var(--cy-text)",
                   }}
                 >
                   {item}
@@ -605,23 +631,19 @@ export default function Page() {
       {/* ── Footer ── */}
       <footer
         style={{
-          backgroundColor: "#eef5f0",
-          borderTop: "1px solid #bdc9c3",
+          backgroundColor: "var(--cy-surface-container)",
+          borderTop: "1px solid var(--cy-border-strong)",
           width: "100%",
           marginTop: "auto",
         }}
       >
         <div
+          className="cy-footer-inner"
           style={{
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-            alignItems: "center",
             padding: "32px 24px",
             width: "100%",
             maxWidth: "1280px",
             margin: "0 auto",
-            gap: "16px",
           }}
         >
           <div
@@ -631,7 +653,7 @@ export default function Page() {
               lineHeight: "32px",
               letterSpacing: "-0.01em",
               fontWeight: 700,
-              color: "#161d1a",
+              color: "var(--cy-text)",
             }}
           >
             ◈ CLIPYARD
@@ -645,7 +667,7 @@ export default function Page() {
               fontFamily: "JetBrains Mono, monospace",
               fontSize: "13px",
               lineHeight: "18px",
-              color: "#3e4944",
+              color: "var(--cy-text-secondary)",
             }}
           >
             <span>© 2024 ClipYard. All rights reserved.</span>
@@ -655,16 +677,16 @@ export default function Page() {
                   key={link}
                   href="#"
                   style={{
-                    color: "#3e4944",
+                    color: "var(--cy-text-secondary)",
                     textDecoration: "none",
                     opacity: 0.9,
                     transition: "opacity 0.2s ease",
                   }}
                   onMouseEnter={(e) =>
-                    ((e.currentTarget.style.opacity) = "1")
+                    (e.currentTarget.style.opacity = "1")
                   }
                   onMouseLeave={(e) =>
-                    ((e.currentTarget.style.opacity) = "0.9")
+                    (e.currentTarget.style.opacity = "0.9")
                   }
                 >
                   {link}
