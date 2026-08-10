@@ -1,3 +1,5 @@
+// app/api/rooms/[roomId]/route.ts
+
 import { NextResponse } from 'next/server'
 import { ServerValue } from 'firebase-admin/database'
 import { getFirebaseAdmin } from '@/lib/firebase-admin'
@@ -39,7 +41,7 @@ export async function GET(request: Request, { params }: { params: { roomId: stri
   const presence = (room.presence || {}) as Record<string, any>
   const activeEntries = Object.entries(presence).filter(([_, entry]) => {
     const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
-    return now - lastSeen < 8000
+    return now - lastSeen < 15000
   })
 
   const people = activeEntries.length || 1
@@ -118,14 +120,24 @@ export async function DELETE(request: Request, { params }: { params: { roomId: s
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { database } = getFirebaseAdmin()
-  const roomSnapshot = await database.ref(`rooms/${roomId}/meta`).get()
-  const meta = roomSnapshot.val()
-  if (!meta) return NextResponse.json({ error: 'That room is unavailable' }, { status: 404 })
+  const forceClose = request.headers.get('x-close-room') === '1'
 
-  if (payload.role !== 'host') {
+  // By default DELETE removes only the caller's presence entry. To avoid
+  // accidental full-room deletion on page unload (which calls DELETE via
+  // keepalive), require an explicit `x-close-room: 1` header and host role to
+  // remove the entire room.
+  if (!forceClose) {
     await database.ref(`rooms/${roomId}/presence/${payload.sid}`).remove()
     return NextResponse.json({ ok: true })
   }
+
+  if (payload.role !== 'host') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const roomSnapshot = await database.ref(`rooms/${roomId}/meta`).get()
+  const meta = roomSnapshot.val()
+  if (!meta) return NextResponse.json({ error: 'That room is unavailable' }, { status: 404 })
 
   await database.ref(`rooms/${roomId}`).remove()
 

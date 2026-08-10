@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
  *
  * Responsibilities:
  *   1. Attach OWASP-recommended security headers to all responses.
- *   2. Apply a sliding-window IP rate limiter on sensitive API endpoints
+ *   2. Apply a sliding-window-log IP rate limiter on sensitive API endpoints
  *      to mitigate brute-force attacks and room-flooding abuse.
  *
  * Rate limiting uses an in-memory Map (per Edge worker instance).
@@ -18,39 +18,72 @@ import { NextRequest, NextResponse } from 'next/server'
 // ─── Rate limiter ─────────────────────────────────────────────────────────────
 
 interface RateLimitEntry {
-  count: number
-  windowStart: number
+  // Timestamps (ms) of requests that landed within the current window.
+  timestamps: number[]
+}
+
+interface RateLimitRule {
+  limit: number
+  windowMs: number
 }
 
 const rateLimitStore = new Map<string, RateLimitEntry>()
 
-const RATE_LIMITED_PATHS = ['/api/rooms/join', '/api/rooms']
+// Buckets are matched by prefix, checked in the order below — put more
+// specific prefixes first. The matched bucket (not the raw request path) is
+// used as the rate-limit key, so e.g. /api/rooms/abc12 and /api/rooms/xyz99
+// share one counter per IP instead of each getting its own.
+//
+// Limits are sized per bucket based on actual client traffic:
+//   - /api/rooms/join: a one-off action per user session — stays strict to
+//     resist brute-forcing room codes.
+//   - /api/rooms/[roomId]: hit repeatedly by ONE open tab via snapshot
+//     polling (~every 500ms), presence heartbeats (~every 2s), and debounced
+//     autosave on keystrokes. A single legitimate tab can generate 150+
+//     requests/minute on its own, and multiple participants behind the same
+//     NAT/IP share this bucket, so the limit needs real headroom — it's
+//     still there to catch runaway loops / scripted abuse, not normal use.
+const RATE_LIMIT_RULES: Array<{ path: string; rule: RateLimitRule }> = [
+  { path: '/api/rooms/join', rule: { limit: 10, windowMs: 60_000 } },
+  { path: '/api/rooms', rule: { limit: 400, windowMs: 60_000 } },
+]
 
-// Allow at most LIMIT requests per WINDOW_MS per IP on rate-limited endpoints.
-const LIMIT = 20
-const WINDOW_MS = 60_000 // 1 minute
+/**
+ * Returns the rate-limit rule (and its bucket key) a path belongs to
+ * (exact or prefix match), or null if the path isn't rate-limited.
+ */
+function matchRateLimitRule(path: string): { bucket: string; rule: RateLimitRule } | null {
+  for (const { path: p, rule } of RATE_LIMIT_RULES) {
+    if (path === p || path.startsWith(p + '/')) return { bucket: p, rule }
+  }
+  return null
+}
 
 function isRateLimited(ip: string, path: string): boolean {
-  // Only apply rate limiting to the specified paths (exact or prefix match).
-  if (!RATE_LIMITED_PATHS.some((p) => path === p || path.startsWith(p + '/'))) {
-    return false
-  }
+  const match = matchRateLimitRule(path)
+  if (!match) return false
+  const { bucket, rule } = match
 
   const now = Date.now()
-  const key = `${ip}:${path}`
-  const entry = rateLimitStore.get(key)
+  const key = `${ip}:${bucket}`
+  const entry = rateLimitStore.get(key) ?? { timestamps: [] }
 
-  if (!entry || now - entry.windowStart > WINDOW_MS) {
-    // New window.
-    rateLimitStore.set(key, { count: 1, windowStart: now })
-    return false
+  // True sliding window: drop any timestamps that have aged out.
+  entry.timestamps = entry.timestamps.filter((t) => now - t < rule.windowMs)
+
+  if (entry.timestamps.length >= rule.limit) {
+    rateLimitStore.set(key, entry)
+    return true
   }
 
-  entry.count += 1
-  if (entry.count > LIMIT) return true
-
+  entry.timestamps.push(now)
+  rateLimitStore.set(key, entry)
   return false
 }
+
+// The longest window across all rules — used to decide when a stale entry
+// is safe to prune, regardless of which bucket it belongs to.
+const MAX_WINDOW_MS = Math.max(...RATE_LIMIT_RULES.map((r) => r.rule.windowMs))
 
 // Periodically prune stale entries to prevent memory growth.
 // Edge runtime doesn't support setInterval — we prune inline every ~100 checks.
@@ -60,7 +93,8 @@ function maybePrune() {
   pruneCounter = 0
   const now = Date.now()
   for (const [key, entry] of rateLimitStore) {
-    if (now - entry.windowStart > WINDOW_MS * 2) {
+    entry.timestamps = entry.timestamps.filter((t) => now - t < MAX_WINDOW_MS)
+    if (entry.timestamps.length === 0) {
       rateLimitStore.delete(key)
     }
   }
@@ -92,11 +126,12 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://*.firebasedatabase.app https://*.firebaseio.com https://*.googleapis.com https://www.gstatic.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob:",
-      "connect-src 'self' https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com",
+      "connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com wss://*.firebaseio.com wss://*.firebasedatabase.app",
+      "frame-src 'self' https://*.firebasedatabase.app https://*.firebaseio.com https://*.googleapis.com https://www.gstatic.com",
       "frame-ancestors 'none'",
     ].join('; '),
   )
@@ -112,6 +147,9 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Determine the real client IP (works behind Vercel / standard proxies).
+  // Note: x-forwarded-for is client-suppliable and only trustworthy when the
+  // app sits behind a proxy that overwrites/strips it (Vercel does this).
+  // If self-hosting behind a different proxy, verify it does the same.
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
@@ -119,15 +157,14 @@ export function middleware(request: NextRequest) {
 
   // Rate-limit check.
   if (isRateLimited(ip, pathname)) {
-    return new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
+    const limited = new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
       status: 429,
       headers: {
         'content-type': 'application/json',
         'retry-after': '60',
-        'X-Frame-Options': 'DENY',
-        'X-Content-Type-Options': 'nosniff',
       },
     })
+    return applySecurityHeaders(limited)
   }
 
   const response = NextResponse.next()

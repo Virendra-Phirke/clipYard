@@ -1,5 +1,8 @@
+// app/api/rooms/route.ts
+
+
 import { NextResponse } from "next/server";
-import { getFirebaseAdmin } from "@/lib/firebase-admin";
+import { getFirebaseAdmin, mintRoomAuthToken } from "@/lib/firebase-admin";
 import { ServerValue } from "firebase-admin/database";
 import { createRoomId, isValidRoomId } from "@/lib/clipboard";
 import { signRoomToken } from "@/lib/room-token";
@@ -14,7 +17,7 @@ export async function POST(request: Request) {
       requestedRoomId && isValidRoomId(requestedRoomId)
         ? requestedRoomId
         : createRoomId();
-    const { auth, database } = getFirebaseAdmin();
+    const { database } = getFirebaseAdmin();
     const hostUid = crypto.randomUUID();
 
     const existing = await database.ref(`rooms/${roomId}/meta`).get();
@@ -33,9 +36,16 @@ export async function POST(request: Request) {
       clip: { text: encryptRoomText(""), updatedAt: ServerValue.TIMESTAMP, updatedBy: hostUid },
       presence: {},
     });
+
+    const [token, firebaseToken] = await Promise.all([
+      signRoomToken({ roomId, role: "host", sid: hostUid }),
+      mintRoomAuthToken(hostUid, roomId),
+    ])
+
     return NextResponse.json({
       roomId,
-      token: await signRoomToken({ roomId, role: "host", sid: hostUid }),
+      token,
+      firebaseToken,
       role: "host",
     });
   } catch (error) {

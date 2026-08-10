@@ -1,3 +1,4 @@
+//lib/firebase-admin.ts
 import 'server-only'
 
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
@@ -12,17 +13,22 @@ function getAdminApp() {
   if (adminApp) return adminApp
   const { firebase } = getServerConfig()
   adminApp = initializeApp({
-    credential: cert({
-      projectId: firebase.projectId,
-      clientEmail: firebase.clientEmail,
-      privateKey: firebase.privateKey,
-    }),
-    databaseURL: firebase.databaseURL,
-  })
+  credential: cert({
+    projectId: firebase.projectId,
+    clientEmail: firebase.clientEmail,
+    privateKey: firebase.privateKey,
+  }),
+  databaseURL: firebase.databaseURL,
+})
   return adminApp
 }
 
 export function getFirebaseAdmin() {
   const app = getAdminApp()
   return { auth: getAuth(app), database: getDatabase(app) }
+}
+
+export async function mintRoomAuthToken(uid: string, roomId: string) {
+  const { auth } = getFirebaseAdmin()
+  return auth.createCustomToken(uid, { roomId })
 }

@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
 import {
   type Device,
+  type RoomLiveState,
   type RoomRole,
   type RoomSnapshot,
   clearCachedToken,
@@ -25,6 +26,9 @@ import {
   sendLeaveBeacon,
   sendPresence,
   setStoredHostFingerprint,
+  signInToFirebaseRoom,
+  subscribeToRoomLive,
+  subscribeToRoomPresence,
 } from '@/services/room'
 import { getLocalFingerprint } from '@/services/fingerprint'
 
@@ -334,10 +338,11 @@ export default function RoomPage() {
   const tokenRef = useRef('')
   const dirtyRef = useRef(false)
   const textRef = useRef('')
+  const lastKnownUpdatedAtRef = useRef<number | undefined>(undefined)
   const saveTimerRef = useRef<number | null>(null)
-  const pollTimerRef = useRef<number | null>(null)
   const heartbeatTimerRef = useRef<number | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
+  const presenceUnsubRef = useRef<(() => void) | null>(null)
 
   const [serverDevices, setServerDevices] = useState<Device[]>([])
 
@@ -407,15 +412,88 @@ export default function RoomPage() {
       }
     }
 
+    async function handleLiveUpdate(state: RoomLiveState) {
+      if (!alive) return
+      if (state.status === 'closed') {
+        clearStoredHostFingerprint(roomId)
+        clearCachedToken(roomId)
+        setStatus('closed')
+        return
+      }
+
+      const now = Date.now()
+      const activeEntries = Object.entries(state.presence).filter(([_, entry]) => {
+        const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
+        return now - lastSeen < 15000
+      })
+
+      setPeople(Math.max(1, activeEntries.length))
+      setServerDevices(
+        activeEntries.map(([sid, entry]) => ({
+          sid,
+          fingerprint: entry.fingerprint || sid,
+          name: entry.name || (entry.role === 'host' ? 'Host' : 'Participant'),
+          deviceLabel: entry.deviceLabel || 'Browser',
+          role: entry.role || 'participant',
+        })),
+      )
+      setConnection('connected')
+
+      if (state.updatedAt !== undefined) {
+        const previousUpdatedAt = lastKnownUpdatedAtRef.current
+        if (previousUpdatedAt !== undefined && state.updatedAt !== previousUpdatedAt) {
+          if (!dirtyRef.current) {
+            loadSnapshot().catch(() => undefined)
+          }
+        }
+        lastKnownUpdatedAtRef.current = state.updatedAt
+      }
+    }
+
     async function connect() {
       try {
-        const payload = await getRoomToken(roomId, fingerprintRef.current, userName ?? '', deviceLabelRef.current)
+        let payload = await getRoomToken(roomId, fingerprintRef.current, userName ?? '', deviceLabelRef.current)
         tokenRef.current = payload.token
+
+        try {
+          await signInToFirebaseRoom(payload.firebaseToken)
+        } catch {
+          clearCachedToken(roomId)
+          payload = await getRoomToken(roomId, fingerprintRef.current, userName ?? '', deviceLabelRef.current, true)
+          tokenRef.current = payload.token
+          await signInToFirebaseRoom(payload.firebaseToken)
+        }
+
         let effectiveRole = payload.role
+        // If server says we're host, persist fingerprint. Otherwise, attempt
+        // a reclaim flow when local storage indicates this device was the
+        // original host (survives refresh). The reclaim endpoint will verify
+        // the fingerprint against the previous host presence entry and, if
+        // valid, reassign hostUid and return a new host token.
         if (effectiveRole === 'host') {
           setStoredHostFingerprint(roomId, fingerprintRef.current)
         } else if (getStoredHostFingerprint(roomId) === fingerprintRef.current) {
-          effectiveRole = 'host'
+          try {
+            const reclaimResp = await fetch(`/api/rooms/${roomId}/reclaim?token=${encodeURIComponent(payload.token)}`, {
+              method: 'POST',
+              headers: { 'x-device-fingerprint': fingerprintRef.current },
+            })
+            if (reclaimResp.ok) {
+              const body = await reclaimResp.json().catch(() => ({}))
+              if (body?.token) {
+                // Upgrade to host token and persist it in session cache.
+                payload = { ...payload, token: body.token, role: 'host' }
+                tokenRef.current = body.token
+                try {
+                  sessionStorage.setItem(`clipboard-token-${roomId}`, JSON.stringify(payload))
+                } catch {}
+                setStoredHostFingerprint(roomId, fingerprintRef.current)
+                effectiveRole = 'host'
+              }
+            }
+          } catch {
+            // ignore reclaim errors — we'll continue as participant
+          }
         }
         setRole(effectiveRole)
         setConnection('connected')
@@ -427,20 +505,39 @@ export default function RoomPage() {
         window.addEventListener('pagehide', handleUnload)
         window.addEventListener('beforeunload', handleUnload)
 
+        const unsubscribe = subscribeToRoomLive(roomId, handleLiveUpdate)
+        const presenceUnsub = subscribeToRoomPresence(roomId, (presence) => {
+          if (!alive) return
+          const now = Date.now()
+          const activeEntries = Object.entries(presence || {}).filter(([_, entry]) => {
+            const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
+            return now - lastSeen < 15000
+          })
+          setPeople(Math.max(1, activeEntries.length))
+          setServerDevices(
+            activeEntries.map(([sid, entry]) => ({
+              sid,
+              fingerprint: entry.fingerprint || sid,
+              name: entry.name || (entry.role === 'host' ? 'Host' : 'Participant'),
+              deviceLabel: entry.deviceLabel || 'Browser',
+              role: entry.role || 'participant',
+            })),
+          )
+        })
+
         cleanupRef.current = () => {
           window.removeEventListener('pagehide', handleUnload)
           window.removeEventListener('beforeunload', handleUnload)
+          unsubscribe()
+          presenceUnsub()
           handleUnload()
         }
-
-        pollTimerRef.current = window.setInterval(() => {
-          loadSnapshot().catch(() => undefined)
-        }, 500)
+        presenceUnsubRef.current = presenceUnsub
 
         heartbeatTimerRef.current = window.setInterval(() => {
           sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '')
             .catch(() => setConnection('offline'))
-        }, 2000)
+        }, 5000)
       } catch (error) {
         if (!alive) return
         setStatus('error')
@@ -454,7 +551,6 @@ export default function RoomPage() {
       alive = false
       cleanupRef.current?.()
       if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current)
-      if (pollTimerRef.current !== null) window.clearInterval(pollTimerRef.current)
       if (heartbeatTimerRef.current !== null) window.clearInterval(heartbeatTimerRef.current)
     }
   }, [roomId, router, userName])
@@ -469,7 +565,7 @@ export default function RoomPage() {
       saveText(roomId, tokenRef.current, textRef.current, fingerprintRef.current)
         .then(() => { dirtyRef.current = false; setSaved(true); setConnection('connected') })
         .catch(() => setConnection('offline'))
-    }, 100)
+    }, 350)
   }
 
   async function copyClipboard() {

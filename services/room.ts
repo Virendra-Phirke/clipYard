@@ -13,6 +13,8 @@
 
 import { sanitizeClipboard, getRoomUrl, isValidRoomId, normalizeRoomId } from '@/lib/clipboard'
 import { getLocalFingerprint, getVisitorId } from '@/services/fingerprint'
+import { getFirebaseServices, signInToFirebaseRoom } from '@/lib/firebase-client'
+import { onValue, ref, onChildAdded, onChildChanged, onChildRemoved, get } from 'firebase/database'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -20,6 +22,7 @@ export type RoomRole = 'host' | 'participant'
 
 export type RoomTokenPayload = {
   token: string
+  firebaseToken: string
   role: RoomRole
   roomId?: string
 }
@@ -79,6 +82,62 @@ export function clearStoredHostFingerprint(roomId: string) {
   localStorage.removeItem(`clipboard-host-fp-${roomId}`)
 }
 
+export function subscribeToRoomLive(
+  roomId: string,
+  onUpdate: (state: RoomLiveState) => void,
+): Unsubscribe {
+  const { database } = getFirebaseServices()
+  const roomRef = ref(database, `rooms/${roomId}`)
+
+  return onValue(
+    roomRef,
+    (snapshot) => {
+      const value = snapshot.val()
+      const state: RoomLiveState = {
+        status: value?.meta?.status,
+        updatedAt: typeof value?.clip?.updatedAt === 'number' ? value.clip.updatedAt : undefined,
+        presence: value?.presence || {},
+      }
+      onUpdate(state)
+    },
+    () => undefined,
+  )
+}
+
+/**
+ * Subscribe specifically to presence child events for lower-latency updates
+ * to participant lists. Calls `onPresence` with the full current presence map
+ * whenever a child is added/changed/removed.
+ */
+export function subscribeToRoomPresence(
+  roomId: string,
+  onPresence: (presence: RoomLiveState['presence']) => void,
+): Unsubscribe {
+  const { database } = getFirebaseServices()
+  const presenceRef = ref(database, `rooms/${roomId}/presence`)
+
+  const handlers: Array<() => void> = []
+
+  const emitCurrent = async () => {
+    const snap = await get(presenceRef)
+    onPresence(snap.val() || {})
+  }
+
+  const childAdded = onChildAdded(presenceRef, () => emitCurrent())
+  handlers.push(() => childAdded())
+  const childChanged = onChildChanged(presenceRef, () => emitCurrent())
+  handlers.push(() => childChanged())
+  const childRemoved = onChildRemoved(presenceRef, () => emitCurrent())
+  handlers.push(() => childRemoved())
+
+  // Emit initial snapshot
+  void emitCurrent()
+
+  return () => {
+    for (const h of handlers) h()
+  }
+}
+
 // ─── Device label ────────────────────────────────────────────────────────────
 
 export function getDeviceLabel(): string {
@@ -111,6 +170,24 @@ export function getParticipantPlaceholders(count: number): string[] {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 export { getRoomUrl, isValidRoomId, normalizeRoomId }
+
+export type RoomLiveState = {
+  status?: 'open' | 'closed'
+  updatedAt?: number
+  presence: Record<
+    string,
+    {
+      lastSeen?: number
+      role?: RoomRole
+      name?: string
+      deviceLabel?: string
+      fingerprint?: string
+      sid: string
+    }
+  >
+}
+
+export type Unsubscribe = () => void
 
 function authHeaders(token: string, fingerprint: string): Record<string, string> {
   return {
@@ -188,7 +265,7 @@ export async function closeRoom(
 ): Promise<void> {
   const response = await fetch(`/api/rooms/${roomId}?token=${encodeURIComponent(token)}`, {
     method: 'DELETE',
-    headers: authHeaders(token, fingerprint),
+    headers: { ...authHeaders(token, fingerprint), 'x-close-room': '1' },
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(payload.error || 'Unable to close room')
@@ -222,18 +299,21 @@ export async function getRoomToken(
   fingerprint: string,
   name: string,
   deviceLabel: string,
+  forceFresh = false,
 ): Promise<RoomTokenPayload> {
-  const cached = readCachedToken(roomId)
-  if (cached) {
-    // Re-apply host role from local storage if server returned stale participant token.
-    if (cached.role !== 'host' && getStoredHostFingerprint(roomId) === fingerprint) {
-      return { ...cached, role: 'host' }
+  if (!forceFresh) {
+    const cached = readCachedToken(roomId)
+    if (cached) {
+      // Re-apply host role from local storage if server returned stale participant token.
+      if (cached.role !== 'host' && getStoredHostFingerprint(roomId) === fingerprint) {
+        return { ...cached, role: 'host' }
+      }
+      return cached
     }
-    return cached
-  }
 
-  const pending = pendingConnections.get(roomId)
-  if (pending) return pending
+    const pending = pendingConnections.get(roomId)
+    if (pending) return pending
+  }
 
   // Kick off FingerprintJS in the background — we won't block on it.
   const visitorIdPromise = getVisitorId()
@@ -254,12 +334,17 @@ export async function getRoomToken(
       return payload
     })
     .finally(() => {
-      pendingConnections.delete(roomId)
+      if (!forceFresh) pendingConnections.delete(roomId)
     })
 
-  pendingConnections.set(roomId, request)
+  if (!forceFresh) {
+    pendingConnections.set(roomId, request)
+  }
+
   return request
 }
+
+export { signInToFirebaseRoom }
 
 // ─── Username persistence ────────────────────────────────────────────────────
 
