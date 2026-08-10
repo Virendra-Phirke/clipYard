@@ -1,7 +1,8 @@
-﻿import type { Metadata } from 'next'
+﻿
 import { getWebsiteStructuredData } from '@/lib/seo/structured-data'
 import { SITE_META } from '@/lib/seo/config'
-import HomePageClient from './page.client'
+import { Metadata } from "next";
+import HomePageClient from "./page.client";
 
 export const metadata: Metadata = {
   title: 'ClipYard — Real-Time Text Transfer',
@@ -39,14 +40,17 @@ export const metadata: Metadata = {
 
 const structuredData = getWebsiteStructuredData()
 
+
 export default function Page() {
+ 
   return (
     <>
-      <script
+    <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <HomePageClient />
+      <HomePageClient/>
+      
     </>
-  )
+  );
 }

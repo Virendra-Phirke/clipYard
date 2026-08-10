@@ -4,7 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function HomePageClient() {
-  const router = useRouter();
+ const router = useRouter();
   const [roomId, setRoomId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,11 +19,19 @@ export default function HomePageClient() {
         body: "{}",
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || "Unable to create room");
-      sessionStorage.setItem(`clipboard-token-${payload.roomId}`, JSON.stringify(payload));
+      if (!response.ok)
+        throw new Error(payload.error || "Unable to create room");
+      sessionStorage.setItem(
+        `clipboard-token-${payload.roomId}`,
+        JSON.stringify(payload),
+      );
       router.push(`/room/${payload.roomId}`);
     } catch (exception) {
-      setError(exception instanceof Error ? exception.message : "Unable to create room");
+      setError(
+        exception instanceof Error
+          ? exception.message
+          : "Unable to create room",
+      );
     } finally {
       setLoading(false);
     }
@@ -39,10 +47,10 @@ export default function HomePageClient() {
     router.push(`/room/${normalized}`);
   }
 
+
   return (
     <>
-      {/* ── Top Nav Bar ── */}
-      <header
+    <header
         style={{
           backgroundColor: "#f3fbf6",
           borderBottom: "1px solid #bdc9c3",
@@ -85,8 +93,12 @@ export default function HomePageClient() {
                 textDecoration: "none",
                 transition: "color 0.2s ease",
               }}
-              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "#006a53")}
-              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "#3e4944")}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLElement).style.color = "#006a53")
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLElement).style.color = "#3e4944")
+              }
             >
               How it works
             </a>
@@ -102,8 +114,12 @@ export default function HomePageClient() {
                 textDecoration: "none",
                 transition: "color 0.2s ease",
               }}
-              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = "#006a53")}
-              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "#3e4944")}
+              onMouseEnter={(e) =>
+                ((e.target as HTMLElement).style.color = "#006a53")
+              }
+              onMouseLeave={(e) =>
+                ((e.target as HTMLElement).style.color = "#3e4944")
+              }
             >
               GitHub
             </a>
@@ -204,10 +220,12 @@ export default function HomePageClient() {
                 transition: "background-color 0.2s ease",
               }}
               onMouseEnter={(e) => {
-                if (!loading) (e.currentTarget.style.backgroundColor) = "#006a53"
+                if (!loading)
+                  (e.currentTarget.style.backgroundColor) = "#006a53";
               }}
               onMouseLeave={(e) => {
-                if (!loading) (e.currentTarget.style.backgroundColor) = "#16856a"
+                if (!loading)
+                  (e.currentTarget.style.backgroundColor) = "#16856a";
               }}
             >
               {loading ? "Creating…" : "Create Clipboard →"}
@@ -230,100 +248,432 @@ export default function HomePageClient() {
                 backgroundColor: "#ffffff",
                 border: "1.5px solid #d1d9d4",
                 borderRadius: "4px",
-                padding: "12px 16px",
+                padding: "8px",
                 display: "flex",
-                gap: "12px",
                 alignItems: "center",
               }}
             >
-              <label htmlFor="room-id-input" style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>
-                Room code
-              </label>
-              <input
-                id="room-id-input"
-                value={roomId}
-                onChange={(event) => setRoomId(event.target.value)}
-                placeholder="Enter room code"
+              <span
                 style={{
-                  minWidth: '240px',
-                  border: '1.5px solid #d1d9d4',
-                  borderRadius: '4px',
-                  padding: '12px 16px',
-                  fontSize: '16px',
-                  outline: 'none',
-                  fontFamily: 'JetBrains Mono, monospace',
+                  fontFamily: "JetBrains Mono, monospace",
+                  fontSize: "14px",
+                  lineHeight: "20px",
+                  letterSpacing: "0.02em",
+                  fontWeight: 500,
+                  color: "#3e4944",
+                  padding: "0 12px",
+                  borderRight: "1px solid #d1d9d4",
+                  marginRight: "8px",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                JOIN EXISTING
+              </span>
+              <input
+                id="room-code-input"
+                value={roomId}
+                onChange={(e) => {
+                  setRoomId(e.target.value);
+                  setError("");
+                }}
+                placeholder="Room code"
+                maxLength={8}
+                style={{
+                  fontFamily: "JetBrains Mono, monospace",
+                  fontSize: "13px",
+                  lineHeight: "18px",
+                  backgroundColor: "transparent",
+                  border: "none",
+                  padding: "8px",
+                  width: "128px",
+                  color: "#161d1a",
+                  outline: "none",
                 }}
               />
               <button
                 type="submit"
                 style={{
-                  backgroundColor: '#16856a',
-                  color: '#fdfffc',
-                  fontFamily: 'Hanken Grotesk, sans-serif',
-                  fontSize: '16px',
-                  lineHeight: '24px',
-                  fontWeight: 600,
-                  padding: '12px 24px',
-                  borderRadius: '4px',
-                  border: '1.5px solid #16856a',
-                  cursor: 'pointer',
-                  transition: 'background-color 0.2s ease',
+                  fontFamily: "JetBrains Mono, monospace",
+                  fontSize: "14px",
+                  letterSpacing: "0.02em",
+                  fontWeight: 500,
+                  color: "#16856a",
+                  background: "none",
+                  border: "none",
+                  padding: "0 12px",
+                  cursor: "pointer",
+                  transition: "color 0.2s ease",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#006a53')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#16856a')}
+                onMouseEnter={(e) =>
+                  ((e.currentTarget.style.color) = "#006a53")
+                }
+                onMouseLeave={(e) =>
+                  ((e.currentTarget.style.color) = "#16856a")
+                }
               >
-                Join
+                Join →
               </button>
             </form>
           </div>
 
-          {error ? (
+          {error && (
             <p
               role="alert"
               style={{
-                marginTop: '24px',
-                color: '#ba1a1a',
-                fontFamily: 'JetBrains Mono, monospace',
+                marginTop: "12px",
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: "13px",
+                color: "#ba1a1a",
               }}
             >
               {error}
             </p>
-          ) : null}
+          )}
         </section>
 
-        <section id="how-it-works" style={{ width: '100%', maxWidth: '888px', display: 'grid', gap: '24px' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '24px', padding: '32px', border: '1.5px solid #d1d9d4' }}>
-            <h2 style={{ fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '24px', lineHeight: '1.2', marginBottom: '16px', color: '#161d1a' }}>
-              How it works
-            </h2>
-            <div style={{ display: 'grid', gap: '16px' }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', color: '#16856a', marginTop: '4px' }}>1</span>
-                <div>
-                  <h3 style={{ margin: 0, fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '18px', color: '#161d1a' }}>Generate a room</h3>
-                  <p style={{ margin: '8px 0 0', color: '#3e4944', lineHeight: '1.6' }}>Create a temporary clipboard that syncs instantly across devices.</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', color: '#16856a', marginTop: '4px' }}>2</span>
-                <div>
-                  <h3 style={{ margin: 0, fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '18px', color: '#161d1a' }}>Connect devices</h3>
-                  <p style={{ margin: '8px 0 0', color: '#3e4944', lineHeight: '1.6' }}>Share the room link or QR code with any device to join instantly.</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '14px', color: '#16856a', marginTop: '4px' }}>3</span>
-                <div>
-                  <h3 style={{ margin: 0, fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '18px', color: '#161d1a' }}>Sync text instantly</h3>
-                  <p style={{ margin: '8px 0 0', color: '#3e4944', lineHeight: '1.6' }}>Paste or type text and have it available across every connected device in the room.</p>
-                </div>
-              </div>
+        {/* ── Product Preview Panel ── */}
+        <section
+          style={{
+            width: "100%",
+            maxWidth: "896px",
+            marginBottom: "128px",
+            backgroundColor: "#ffffff",
+            border: "1.5px solid #d1d9d4",
+            borderRadius: "4px",
+            boxShadow: "0 1px 2px 0 rgba(0,0,0,0.05)",
+          }}
+        >
+          {/* Panel Header */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 24px",
+              borderBottom: "1.5px solid #d1d9d4",
+              backgroundColor: "#f3fbf6",
+              borderRadius: "4px 4px 0 0",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  backgroundColor: "#16856a",
+                }}
+              />
+              <span
+                style={{
+                  fontFamily: "JetBrains Mono, monospace",
+                  fontSize: "14px",
+                  lineHeight: "20px",
+                  letterSpacing: "0.05em",
+                  fontWeight: 500,
+                  color: "#161d1a",
+                  textTransform: "uppercase",
+                }}
+              >
+                Clipboard • Connected
+              </span>
+            </div>
+            <div
+              style={{
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: "13px",
+                lineHeight: "18px",
+                backgroundColor: "#e8f0eb",
+                padding: "4px 12px",
+                borderRadius: "2px",
+                border: "1.5px solid #d1d9d4",
+                color: "#3e4944",
+              }}
+            >
+              ID: K7Q9-X2MP
             </div>
           </div>
+
+          {/* Panel Body */}
+          <div
+            style={{
+              padding: "24px",
+              height: "256px",
+              backgroundColor: "#ffffff",
+              position: "relative",
+            }}
+          >
+            <textarea
+              readOnly
+              defaultValue={`git clone https://github.com/example/clipyard.git\ncd clipyard\nnpm install\nnpm run dev\n\n// Database connection string\npostgres://user:pass@localhost:5432/clipyard_db`}
+              style={{
+                width: "100%",
+                height: "100%",
+                resize: "none",
+                backgroundColor: "transparent",
+                border: "none",
+                outline: "none",
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: "13px",
+                lineHeight: "18px",
+                color: "#161d1a",
+                padding: 0,
+              }}
+            />
+            <button
+              title="Copy to clipboard"
+              onClick={() => {
+                navigator.clipboard.writeText(
+                  `git clone https://github.com/example/clipyard.git\ncd clipyard\nnpm install\nnpm run dev\n\n// Database connection string\npostgres://user:pass@localhost:5432/clipyard_db`,
+                );
+              }}
+              style={{
+                position: "absolute",
+                bottom: "24px",
+                right: "24px",
+                backgroundColor: "#e2eae5",
+                border: "1.5px solid #d1d9d4",
+                borderRadius: "2px",
+                padding: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.2s ease",
+              }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget.style.backgroundColor) = "#e8f0eb")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget.style.backgroundColor) = "#e2eae5")
+              }
+            >
+              <span className="material-symbols-outlined" style={{ color: "#3e4944", fontSize: "20px" }}>
+                content_copy
+              </span>
+            </button>
+          </div>
+
+          {/* Panel Footer */}
+          <div
+            style={{
+              padding: "12px 24px",
+              borderTop: "1.5px solid #d1d9d4",
+              backgroundColor: "#f3fbf6",
+              borderRadius: "0 0 4px 4px",
+              fontFamily: "JetBrains Mono, monospace",
+              fontSize: "13px",
+              lineHeight: "18px",
+              color: "#3e4944",
+              display: "flex",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>248 CHARACTERS</span>
+            <span>SYNCED 2 DEVICES</span>
+          </div>
         </section>
+
+        {/* ── How It Works & Utility Highlights ── */}
+        <div
+          id="how-it-works"
+          style={{
+            width: "100%",
+            maxWidth: "1024px",
+            display: "grid",
+            gridTemplateColumns: "repeat(12, 1fr)",
+            gap: "24px",
+            marginBottom: "80px",
+          }}
+        >
+          {/* How It Works – 8 cols */}
+          <section
+            style={{
+              gridColumn: "span 8",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "24px",
+            }}
+          >
+            {[
+              {
+                num: "01 CREATE",
+                title: "Generate a room",
+                desc: "Click create to instantly get a secure, temporary workspace.",
+              },
+              {
+                num: "02 SHARE",
+                title: "Connect devices",
+                desc: "Use the 8-character code or QR to join from any device.",
+              },
+              {
+                num: "03 COPY",
+                title: "Sync text instantly",
+                desc: "Paste on one device, copy on the other. Disappears when closed.",
+              },
+            ].map((step) => (
+              <div
+                key={step.num}
+                style={{ flex: "1 1 160px", display: "flex", flexDirection: "column" }}
+              >
+                <span
+                  style={{
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontSize: "14px",
+                    letterSpacing: "0.02em",
+                    fontWeight: 500,
+                    color: "#16856a",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {step.num}
+                </span>
+                <div
+                  style={{
+                    height: "1.5px",
+                    width: "100%",
+                    backgroundColor: "#d1d9d4",
+                    marginBottom: "16px",
+                  }}
+                />
+                <h3
+                  style={{
+                    fontFamily: "Hanken Grotesk, sans-serif",
+                    fontSize: "16px",
+                    lineHeight: "24px",
+                    fontWeight: 600,
+                    color: "#161d1a",
+                    marginBottom: "4px",
+                  }}
+                >
+                  {step.title}
+                </h3>
+                <p
+                  style={{
+                    fontFamily: "Hanken Grotesk, sans-serif",
+                    fontSize: "14px",
+                    lineHeight: "20px",
+                    color: "#3e4944",
+                  }}
+                >
+                  {step.desc}
+                </p>
+              </div>
+            ))}
+          </section>
+
+          {/* Utility Highlights – 4 cols */}
+          <section
+            style={{
+              gridColumn: "span 4",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              justifyContent: "center",
+              paddingLeft: "32px",
+              borderLeft: "1px solid #d1d9d4",
+            }}
+          >
+            {[
+              "NO ACCOUNT REQUIRED",
+              "REAL-TIME WEBSOCKET SYNC",
+              "E2E ENCRYPTION OPTION",
+            ].map((item) => (
+              <div key={item} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span
+                  className="material-symbols-outlined"
+                  style={{ color: "#16856a", fontSize: "16px" }}
+                >
+                  check_circle
+                </span>
+                <span
+                  style={{
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontSize: "13px",
+                    lineHeight: "18px",
+                    color: "#161d1a",
+                  }}
+                >
+                  {item}
+                </span>
+              </div>
+            ))}
+          </section>
+        </div>
       </main>
-    </>
+
+      {/* ── Footer ── */}
+      <footer
+        style={{
+          backgroundColor: "#eef5f0",
+          borderTop: "1px solid #bdc9c3",
+          width: "100%",
+          marginTop: "auto",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "32px 24px",
+            width: "100%",
+            maxWidth: "1280px",
+            margin: "0 auto",
+            gap: "16px",
+          }}
+        >
+          <div
+            style={{
+              fontFamily: "Hanken Grotesk, sans-serif",
+              fontSize: "24px",
+              lineHeight: "32px",
+              letterSpacing: "-0.01em",
+              fontWeight: 700,
+              color: "#161d1a",
+            }}
+          >
+            ◈ CLIPYARD
+          </div>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "16px",
+              fontFamily: "JetBrains Mono, monospace",
+              fontSize: "13px",
+              lineHeight: "18px",
+              color: "#3e4944",
+            }}
+          >
+            <span>© 2024 ClipYard. All rights reserved.</span>
+            <nav style={{ display: "flex", gap: "16px" }}>
+              {["Terms", "Privacy", "Support"].map((link) => (
+                <a
+                  key={link}
+                  href="#"
+                  style={{
+                    color: "#3e4944",
+                    textDecoration: "none",
+                    opacity: 0.9,
+                    transition: "opacity 0.2s ease",
+                  }}
+                  onMouseEnter={(e) =>
+                    ((e.currentTarget.style.opacity) = "1")
+                  }
+                  onMouseLeave={(e) =>
+                    ((e.currentTarget.style.opacity) = "0.9")
+                  }
+                >
+                  {link}
+                </a>
+              ))}
+            </nav>
+          </div>
+        </div>
+      </footer>
+      </>
   );
 }
