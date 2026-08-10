@@ -423,21 +423,26 @@ export default function RoomPage() {
       }
 
       const now = Date.now()
-      const activeEntries = Object.entries(state.presence).filter(([_, entry]) => {
-        const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
-        return now - lastSeen < PRESENCE_LIFESPAN_MS
-      })
+      const presenceEntries = Object.entries(state.presence || {})
 
-      setPeople(Math.max(1, activeEntries.length))
-      setServerDevices(
-        activeEntries.map(([sid, entry]) => ({
-          sid,
-          fingerprint: entry.fingerprint || sid,
-          name: entry.name || (entry.role === 'host' ? 'Host' : 'Participant'),
-          deviceLabel: entry.deviceLabel || 'Browser',
-          role: entry.role || 'participant',
-        })),
-      )
+      if (presenceEntries.length > 0) {
+        const activeEntries = presenceEntries.filter(([_, entry]) => {
+          const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
+          return now - lastSeen < PRESENCE_LIFESPAN_MS
+        })
+
+        setPeople(Math.max(1, activeEntries.length))
+        setServerDevices(
+          activeEntries.map(([sid, entry]) => ({
+            sid,
+            fingerprint: entry.fingerprint || sid,
+            name: entry.name || (entry.role === 'host' ? 'Host' : 'Participant'),
+            deviceLabel: entry.deviceLabel || 'Browser',
+            role: entry.role || 'participant',
+          })),
+        )
+      }
+
       setConnection('connected')
 
       if (state.updatedAt !== undefined) {

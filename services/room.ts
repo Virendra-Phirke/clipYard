@@ -14,7 +14,7 @@
 import { sanitizeClipboard, getRoomUrl, isValidRoomId, normalizeRoomId } from '@/lib/clipboard'
 import { getLocalFingerprint, getVisitorId } from '@/services/fingerprint'
 import { getFirebaseServices, signInToFirebaseRoom } from '@/lib/firebase-client'
-import { onValue, ref, onChildAdded, onChildChanged, onChildRemoved, get } from 'firebase/database'
+import { onValue, ref } from 'firebase/database'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -87,21 +87,47 @@ export function subscribeToRoomLive(
   onUpdate: (state: RoomLiveState) => void,
 ): Unsubscribe {
   const { database } = getFirebaseServices()
-  const roomRef = ref(database, `rooms/${roomId}`)
+  const metaRef = ref(database, `rooms/${roomId}/meta`)
+  const updatedAtRef = ref(database, `rooms/${roomId}/clip/updatedAt`)
 
-  return onValue(
-    roomRef,
+  let currentStatus: RoomLiveState['status']
+  let currentUpdatedAt: number | undefined
+
+  const emit = () => {
+    onUpdate({
+      status: currentStatus,
+      updatedAt: currentUpdatedAt,
+      presence: {},
+    })
+  }
+
+  const metaUnsub = onValue(
+    metaRef,
+    (snapshot) => {
+      currentStatus = snapshot.val()?.status
+      emit()
+    },
+    (error) => {
+      console.error('Firebase room meta listener failed', roomId, error)
+    },
+  )
+
+  const updatedAtUnsub = onValue(
+    updatedAtRef,
     (snapshot) => {
       const value = snapshot.val()
-      const state: RoomLiveState = {
-        status: value?.meta?.status,
-        updatedAt: typeof value?.clip?.updatedAt === 'number' ? value.clip.updatedAt : undefined,
-        presence: value?.presence || {},
-      }
-      onUpdate(state)
+      currentUpdatedAt = typeof value === 'number' ? value : undefined
+      emit()
     },
-    () => undefined,
+    (error) => {
+      console.error('Firebase room updatedAt listener failed', roomId, error)
+    },
   )
+
+  return () => {
+    try { metaUnsub() } catch { /* ignore */ }
+    try { updatedAtUnsub() } catch { /* ignore */ }
+  }
 }
 
 /**
@@ -118,9 +144,15 @@ export function subscribeToRoomPresence(
 
   // Listen to the whole presence node — this delivers the current map
   // immediately and on every change (child added/changed/removed).
-  const unsub = onValue(presenceRef, (snapshot) => {
-    onPresence(snapshot.val() || {})
-  })
+  const unsub = onValue(
+    presenceRef,
+    (snapshot) => {
+      onPresence(snapshot.val() || {})
+    },
+    (error) => {
+      console.error('Firebase room presence listener failed', roomId, error)
+    },
+  )
 
   return () => {
     try { unsub() } catch { /* ignore */ }
