@@ -3,21 +3,23 @@ import 'server-only'
 import { cert, getApps, initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { getDatabase } from 'firebase-admin/database'
+import { getServerConfig } from '@/lib/config'
+
+let adminApp: ReturnType<typeof initializeApp> | null = null
 
 function getAdminApp() {
   if (getApps().length) return getApps()[0]
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n')
-  if (!process.env.FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
-    throw new Error('Firebase server credentials are not configured')
-  }
-  return initializeApp({
+  if (adminApp) return adminApp
+  const { firebase } = getServerConfig()
+  adminApp = initializeApp({
     credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey,
+      projectId: firebase.projectId,
+      clientEmail: firebase.clientEmail,
+      privateKey: firebase.privateKey,
     }),
-    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+    databaseURL: firebase.databaseURL,
   })
+  return adminApp
 }
 
 export function getFirebaseAdmin() {

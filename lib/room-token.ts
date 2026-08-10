@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { jwtVerify, SignJWT } from 'jose'
+import { getServerConfig } from '@/lib/config'
 
 export type RoomTokenPayload = {
   roomId: string
@@ -9,9 +10,8 @@ export type RoomTokenPayload = {
 }
 
 function getRoomTokenSecret() {
-  const secret = process.env.FIREBASE_PRIVATE_KEY?.trim()
-  if (!secret) throw new Error('Room token secret is not configured')
-  return new TextEncoder().encode(secret)
+  const { jwtSecret } = getServerConfig()
+  return new TextEncoder().encode(jwtSecret)
 }
 
 export async function signRoomToken(payload: RoomTokenPayload) {
@@ -29,7 +29,7 @@ export async function verifyRoomToken(token: string) {
     const role = payload.role === 'host' || payload.role === 'participant' ? payload.role : ''
     const sid = typeof payload.sid === 'string' ? payload.sid : ''
     if (!roomId || !role || !sid) return null
-    return { roomId, role, sid }
+    return { roomId, role, sid } as RoomTokenPayload
   } catch {
     return null
   }
