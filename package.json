@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@lglab/react-qr-code": "^1.7.1",
     "@vercel/analytics": "1.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -19,6 +20,8 @@
     "jose": "^6.2.8",
     "lucide-react": "^1.16.0",
     "next": "16.3.0",
+    "qrcode.react": "^4.2.0",
+    "@fingerprintjs/fingerprintjs": "^4.6.0",
     "react": "^19",
     "react-dom": "^19",
     "shadcn": "^4.8.0",
@@ -35,6 +38,12 @@
     "typescript": "5.7.3"
   },
   "overrides": {
-    "hono": "4.12.25"
+    "hono": "4.12.25",
+    "uuid": "^11.1.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "uuid": "^11.1.1"
+    }
   }
 }

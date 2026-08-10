@@ -2,19 +2,21 @@
   "rules": {
     "rooms": {
       "$roomId": {
-        ".read": "auth != null && auth.token.roomId == $roomId",
+        ".read": "auth != null && auth.token.roomId === $roomId",
+        ".write": false,
         "meta": {
-          ".write": "auth != null && auth.token.roomId == $roomId && auth.token.role == 'host'",
-          ".validate": "newData.hasChildren(['hostUid', 'status']) && newData.child('hostUid').val() == data.child('hostUid').val() && (newData.child('status').val() == 'open' || newData.child('status').val() == 'closed')"
-        },
-        "clip": {
-          ".write": "auth != null && auth.token.roomId == $roomId && newData.hasChildren(['text']) && newData.child('text').isString() && newData.child('text').val().length <= 100000",
-          ".validate": "newData.hasChildren(['text', 'updatedAt'])"
+          ".read": "auth != null && auth.token.roomId === $roomId"
         },
         "presence": {
+          ".read": "auth != null && auth.token.roomId === $roomId",
           "$uid": {
-            ".write": "auth != null && auth.token.roomId == $roomId && auth.uid == $uid",
-            ".validate": "newData.hasChildren(['lastSeen'])"
+            ".write": "auth != null && auth.token.roomId === $roomId && auth.uid === $uid"
+          }
+        },
+        "clip": {
+          ".read": "auth != null && auth.token.roomId === $roomId",
+          "updatedAt": {
+            ".read": "auth != null && auth.token.roomId === $roomId"
           }
         }
       }

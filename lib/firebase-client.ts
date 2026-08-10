@@ -1,8 +1,10 @@
+//lib/firebase-client.ts
+
 'use client'
 
 import { getApp, getApps, initializeApp } from 'firebase/app'
 import { getDatabase } from 'firebase/database'
-import { getAuth } from 'firebase/auth'
+import { getAuth, signInWithCustomToken, signOut } from 'firebase/auth'
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,4 +23,14 @@ export function getFirebaseApp() {
 export function getFirebaseServices() {
   const app = getFirebaseApp()
   return { auth: getAuth(app), database: getDatabase(app) }
+}
+
+export async function signInToFirebaseRoom(firebaseToken: string) {
+  const { auth } = getFirebaseServices()
+  await signOut(auth).catch(() => undefined)
+  await signInWithCustomToken(auth, firebaseToken)
+  const user = auth.currentUser
+  if (user) {
+    const tokenResult = await user.getIdTokenResult(true)
+  }
 }

@@ -1,6 +1,9 @@
+// app/api/rooms/[roomId]/route.ts
+
 import { NextResponse } from 'next/server'
 import { ServerValue } from 'firebase-admin/database'
 import { getFirebaseAdmin } from '@/lib/firebase-admin'
+import { PRESENCE_LIFESPAN_MS } from '@/lib/presence'
 import { sanitizeClipboard } from '@/lib/clipboard'
 import { verifyRoomToken } from '@/lib/room-token'
 import { decryptRoomText, encryptRoomText } from '@/lib/room-data'
@@ -32,15 +35,25 @@ export async function GET(request: Request, { params }: { params: { roomId: stri
     return NextResponse.json({ error: 'That room is unavailable' }, { status: 404 })
   }
   if (room.meta.status === 'closed') {
-    return NextResponse.json({ roomId, status: 'closed', text: '', people: 0, role: payload.role })
+    return NextResponse.json({ roomId, status: 'closed', text: '', people: 0, role: payload.role, devices: [] })
   }
 
   const now = Date.now()
-  const presence = room.presence || {}
-  const people = Object.values(presence).filter((entry: any) => {
+  const presence = (room.presence || {}) as Record<string, any>
+  const activeEntries = Object.entries(presence).filter(([_, entry]) => {
     const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
-    return now - lastSeen < 45000
-  }).length || 1
+    return now - lastSeen < PRESENCE_LIFESPAN_MS
+  })
+
+  const people = activeEntries.length || 1
+
+  const devices = activeEntries.map(([sid, entry]) => ({
+    sid,
+    fingerprint: entry.fingerprint || sid,
+    name: entry.name || (entry.role === 'host' ? 'Host' : 'Participant'),
+    deviceLabel: entry.deviceLabel || 'Browser',
+    role: entry.role || 'participant',
+  }))
 
   return NextResponse.json({
     roomId,
@@ -48,6 +61,7 @@ export async function GET(request: Request, { params }: { params: { roomId: stri
     text: typeof room.clip?.text === 'string' ? decryptRoomText(room.clip.text) : '',
     people,
     role: payload.role,
+    devices,
   })
 }
 
@@ -82,10 +96,19 @@ export async function POST(request: Request, { params }: { params: { roomId: str
   const payload = await getRoomContext(request, roomId)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const body = await request.json().catch(() => ({}))
+  const fingerprint = request.headers.get('x-device-fingerprint') || payload.sid
+  const name = typeof body.name === 'string' ? body.name.trim().slice(0, 24) : ''
+  const deviceLabel = typeof body.deviceLabel === 'string' ? body.deviceLabel.trim() : ''
+
   const { database } = getFirebaseAdmin()
   await database.ref(`rooms/${roomId}/presence/${payload.sid}`).set({
     lastSeen: ServerValue.TIMESTAMP,
     role: payload.role,
+    name,
+    deviceLabel,
+    fingerprint,
+    sid: payload.sid,
   })
 
   return NextResponse.json({ ok: true })
@@ -98,14 +121,24 @@ export async function DELETE(request: Request, { params }: { params: { roomId: s
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { database } = getFirebaseAdmin()
-  const roomSnapshot = await database.ref(`rooms/${roomId}/meta`).get()
-  const meta = roomSnapshot.val()
-  if (!meta) return NextResponse.json({ error: 'That room is unavailable' }, { status: 404 })
+  const forceClose = request.headers.get('x-close-room') === '1'
 
-  if (payload.role !== 'host') {
+  // By default DELETE removes only the caller's presence entry. To avoid
+  // accidental full-room deletion on page unload (which calls DELETE via
+  // keepalive), require an explicit `x-close-room: 1` header and host role to
+  // remove the entire room.
+  if (!forceClose) {
     await database.ref(`rooms/${roomId}/presence/${payload.sid}`).remove()
     return NextResponse.json({ ok: true })
   }
+
+  if (payload.role !== 'host') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  const roomSnapshot = await database.ref(`rooms/${roomId}/meta`).get()
+  const meta = roomSnapshot.val()
+  if (!meta) return NextResponse.json({ error: 'That room is unavailable' }, { status: 404 })
 
   await database.ref(`rooms/${roomId}`).remove()
 
