@@ -14,7 +14,7 @@
 import { sanitizeClipboard, getRoomUrl, isValidRoomId, normalizeRoomId } from '@/lib/clipboard'
 import { getLocalFingerprint, getVisitorId } from '@/services/fingerprint'
 import { getFirebaseServices, signInToFirebaseRoom } from '@/lib/firebase-client'
-import { onValue, ref } from 'firebase/database'
+import { onDisconnect, onValue, ref } from 'firebase/database'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -82,51 +82,69 @@ export function clearStoredHostFingerprint(roomId: string) {
   localStorage.removeItem(`clipboard-host-fp-${roomId}`)
 }
 
-export function subscribeToRoomLive(
+export function subscribeToRoomStatus(
   roomId: string,
-  onUpdate: (state: RoomLiveState) => void,
+  onStatus: (status: 'open' | 'closed') => void,
 ): Unsubscribe {
   const { database } = getFirebaseServices()
-  const metaRef = ref(database, `rooms/${roomId}/meta`)
-  const updatedAtRef = ref(database, `rooms/${roomId}/clip/updatedAt`)
+  const statusRef = ref(database, `rooms/${roomId}/meta/status`)
 
-  let currentStatus: RoomLiveState['status']
-  let currentUpdatedAt: number | undefined
-
-  const emit = () => {
-    onUpdate({
-      status: currentStatus,
-      updatedAt: currentUpdatedAt,
-      presence: {},
-    })
-  }
-
-  const metaUnsub = onValue(
-    metaRef,
-    (snapshot) => {
-      currentStatus = snapshot.val()?.status
-      emit()
-    },
-    (error) => {
-      console.error('Firebase room meta listener failed', roomId, error)
-    },
-  )
-
-  const updatedAtUnsub = onValue(
-    updatedAtRef,
+  const unsub = onValue(
+    statusRef,
     (snapshot) => {
       const value = snapshot.val()
-      currentUpdatedAt = typeof value === 'number' ? value : undefined
-      emit()
+      if (value === null) {
+        onStatus('closed')
+        return
+      }
+      onStatus(value === 'closed' ? 'closed' : 'open')
     },
     (error) => {
-      console.error('Firebase room updatedAt listener failed', roomId, error)
+      console.error('Firebase room status listener failed', roomId, error)
     },
   )
 
   return () => {
-    try { metaUnsub() } catch { /* ignore */ }
-    try { updatedAtUnsub() } catch { /* ignore */ }
+    try { unsub() } catch { /* ignore */ }
+  }
+}
+
+export function subscribeToRoomClipUpdatedAt(
+  roomId: string,
+  onUpdatedAt: (updatedAt?: number) => void,
+): Unsubscribe {
+  const { database } = getFirebaseServices()
+  const updatedAtRef = ref(database, `rooms/${roomId}/clip/updatedAt`)
+
+  const unsub = onValue(
+    updatedAtRef,
+    (snapshot) => {
+      const value = snapshot.val()
+      onUpdatedAt(typeof value === 'number' ? value : undefined)
+    },
+    (error) => {
+      console.error('Firebase room clip listener failed', roomId, error)
+    },
+  )
+
+  return () => {
+    try { unsub() } catch { /* ignore */ }
+  }
+}
+
+export function setupRoomPresenceOnDisconnect(roomId: string) {
+  const { auth, database } = getFirebaseServices()
+  const uid = auth.currentUser?.uid
+  if (!uid) return () => undefined
+
+  const presenceRef = ref(database, `rooms/${roomId}/presence/${uid}`)
+  const onDisconnectRef = onDisconnect(presenceRef)
+  onDisconnectRef.remove().catch((error) => {
+    console.error('Failed to register room presence onDisconnect', roomId, error)
+  })
+
+  return () => {
+    onDisconnectRef.cancel().catch(() => undefined)
   }
 }
 
