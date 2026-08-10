@@ -290,6 +290,7 @@ header, footer, main, section, div, button, input, textarea, a, span, nav {
     grid-column: span 1;
   }
 }
+.eyebrow { @apply font-mono text-xs uppercase tracking-[0.16em] text-primary; }
 
 /* ── Mobile breakpoint ── */
 @media (max-width: 640px) {
