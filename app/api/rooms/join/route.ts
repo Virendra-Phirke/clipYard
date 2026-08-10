@@ -11,9 +11,19 @@ export async function POST(request: Request) {
     const roomId = normalizeRoomId(typeof body.roomId === 'string' ? body.roomId : '')
     if (!isValidRoomId(roomId)) return NextResponse.json({ error: 'Enter a valid room code' }, { status: 400 })
     const { database } = getFirebaseAdmin()
-    const snapshot = await database.ref(`rooms/${roomId}/meta`).get()
-    const meta = snapshot.val()
+    const [metaSnapshot, presenceSnapshot] = await Promise.all([
+      database.ref(`rooms/${roomId}/meta`).get(),
+      database.ref(`rooms/${roomId}/presence`).get()
+    ])
+
+    const meta = metaSnapshot.val()
     if (!meta || meta.status !== 'open') return NextResponse.json({ error: 'That room is unavailable' }, { status: 404 })
+
+    const presence = presenceSnapshot.val() || {}
+    const activeUsersCount = Object.keys(presence).length
+    if (activeUsersCount >= 10) {
+      return NextResponse.json({ error: 'Room is full (max 10 users)' }, { status: 403 })
+    }
     const participantUid = crypto.randomUUID()
 
     const [token, firebaseToken] = await Promise.all([
