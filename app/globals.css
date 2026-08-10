@@ -79,37 +79,236 @@
   --radius-full:    0.75rem;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   THEME CUSTOM PROPERTIES — light / dark
+   These --cy-* vars are consumed by inline styles across both pages.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+html.light {
+  --cy-bg:                      #FAFAF8;
+  --cy-bg-dots:                 #d1d9d4;
+  --cy-surface:                 #f3fbf6;
+  --cy-surface-white:           #ffffff;
+  --cy-surface-container:       #eef5f0;
+  --cy-surface-container-high:  #e8f0eb;
+  --cy-surface-container-highest: #e2eae5;
+  --cy-text:                    #161d1a;
+  --cy-text-secondary:          #3e4944;
+  --cy-text-muted:              #6e7a74;
+  --cy-border:                  #d1d9d4;
+  --cy-border-strong:           #bdc9c3;
+  --cy-primary:                 #16856a;
+  --cy-primary-hover:           #006a53;
+  --cy-primary-text:            #006a53;
+  --cy-on-primary:              #fdfffc;
+  --cy-error:                   #ba1a1a;
+  --cy-warning:                 #e89c2a;
+  --cy-secondary-text:          #555f71;
+  --cy-lifespan:                #95453b;
+  --cy-shadow:                  rgba(0,0,0,0.05);
+  --cy-qr-fg:                   #006a53;
+  --cy-qr-bg:                   #ffffff;
+}
+
+html.dark {
+  --cy-bg:                      #111111;
+  --cy-bg-dots:                 #1e1e1e;
+  --cy-surface:                 #171717;
+  --cy-surface-white:           #1c1c1c;
+  --cy-surface-container:       #222222;
+  --cy-surface-container-high:  #2a2a2a;
+  --cy-surface-container-highest: #333333;
+  --cy-text:                    #e5e5e5;
+  --cy-text-secondary:          #a0a0a0;
+  --cy-text-muted:              #737373;
+  --cy-border:                  #2e2e2e;
+  --cy-border-strong:           #3d3d3d;
+  --cy-primary:                 #78d8b9;
+  --cy-primary-hover:           #94f5d4;
+  --cy-primary-text:            #78d8b9;
+  --cy-on-primary:              #00382a;
+  --cy-error:                   #ffb4ab;
+  --cy-warning:                 #f0c060;
+  --cy-secondary-text:          #b0b0b0;
+  --cy-lifespan:                #ffb4a9;
+  --cy-shadow:                  rgba(0,0,0,0.4);
+  --cy-qr-fg:                   #78d8b9;
+  --cy-qr-bg:                   #1c1c1c;
+}
+
 /* ── Base body styles ── */
 body {
-  background-color: #FAFAF8;
-  background-image: radial-gradient(#d1d9d4 1px, transparent 1px);
+  background-color: var(--cy-bg);
+  background-image: radial-gradient(var(--cy-bg-dots) 1px, transparent 1px);
   background-size: 24px 24px;
   font-family: "Hanken Grotesk", sans-serif;
-  color: #161d1a;
+  color: var(--cy-text);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth theme transition for key elements */
+header, footer, main, section, div, button, input, textarea, a, span, nav {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* ── Precision border utilities ── */
 @utility precision-border {
-  border: 1.5px solid #d1d9d4;
+  border: 1.5px solid var(--cy-border);
 }
 
 @utility precision-border-b {
-  border-bottom: 1.5px solid #d1d9d4;
+  border-bottom: 1.5px solid var(--cy-border);
 }
 
 @utility precision-border-t {
-  border-top: 1.5px solid #d1d9d4;
+  border-top: 1.5px solid var(--cy-border);
 }
 
 @utility precision-input {
   &:focus {
-    border-color: #16856A;
+    border-color: var(--cy-primary);
     outline: none;
     box-shadow: none;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE LAYOUT HELPERS
+   Used via class names on the grid containers.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Home page: "How it works" grid — 12-col desktop, 1-col mobile */
+.cy-features-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+  width: 100%;
+}
+.cy-features-main  { grid-column: span 8; }
+.cy-features-side  { grid-column: span 4; }
+
+/* Room page: editor + sidebar grid */
+.cy-room-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+.cy-room-editor  { grid-column: span 8; }
+.cy-room-sidebar { grid-column: span 4; }
+
+/* Room header layout */
+.cy-room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.cy-room-header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+/* Home hero section */
+.cy-hero-main {
+  padding: 64px 32px;
+}
+
+/* Home nav links */
+.cy-nav-links {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+/* Home footer inner */
+.cy-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Room footer links */
+.cy-footer-links {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+/* ── Tablet breakpoint ── */
+@media (max-width: 1024px) {
+  .cy-features-grid {
+    grid-template-columns: 1fr;
+  }
+  .cy-features-main,
+  .cy-features-side {
+    grid-column: span 1;
+  }
+  .cy-features-side {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--cy-border);
+    padding-top: 24px;
+  }
+
+  .cy-room-grid {
+    grid-template-columns: 1fr;
+  }
+  .cy-room-editor,
+  .cy-room-sidebar {
+    grid-column: span 1;
+  }
+}
+
+/* ── Mobile breakpoint ── */
+@media (max-width: 640px) {
+  .cy-hero-main {
+    padding: 32px 16px;
+  }
+
+  .cy-room-header-left {
+    gap: 12px;
+  }
+
+  .cy-nav-links {
+    gap: 12px;
+  }
+
+  .cy-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .cy-footer-links {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Scrollbar dark mode support ── */
+html.dark ::-webkit-scrollbar {
+  width: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: var(--cy-surface);
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: var(--cy-border-strong);
+  border-radius: 4px;
+}
+
+/* ── Selection color ── */
+::selection {
+  background-color: var(--cy-primary);
+  color: var(--cy-on-primary);
 }
