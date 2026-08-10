@@ -116,25 +116,14 @@ export function subscribeToRoomPresence(
   const { database } = getFirebaseServices()
   const presenceRef = ref(database, `rooms/${roomId}/presence`)
 
-  const handlers: Array<() => void> = []
-
-  const emitCurrent = async () => {
-    const snap = await get(presenceRef)
-    onPresence(snap.val() || {})
-  }
-
-  const childAdded = onChildAdded(presenceRef, () => emitCurrent())
-  handlers.push(() => childAdded())
-  const childChanged = onChildChanged(presenceRef, () => emitCurrent())
-  handlers.push(() => childChanged())
-  const childRemoved = onChildRemoved(presenceRef, () => emitCurrent())
-  handlers.push(() => childRemoved())
-
-  // Emit initial snapshot
-  void emitCurrent()
+  // Listen to the whole presence node — this delivers the current map
+  // immediately and on every change (child added/changed/removed).
+  const unsub = onValue(presenceRef, (snapshot) => {
+    onPresence(snapshot.val() || {})
+  })
 
   return () => {
-    for (const h of handlers) h()
+    try { unsub() } catch { /* ignore */ }
   }
 }
 

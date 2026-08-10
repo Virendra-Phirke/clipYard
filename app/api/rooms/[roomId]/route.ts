@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server'
 import { ServerValue } from 'firebase-admin/database'
 import { getFirebaseAdmin } from '@/lib/firebase-admin'
+import { PRESENCE_LIFESPAN_MS } from '@/lib/presence'
 import { sanitizeClipboard } from '@/lib/clipboard'
 import { verifyRoomToken } from '@/lib/room-token'
 import { decryptRoomText, encryptRoomText } from '@/lib/room-data'
@@ -41,7 +42,7 @@ export async function GET(request: Request, { params }: { params: { roomId: stri
   const presence = (room.presence || {}) as Record<string, any>
   const activeEntries = Object.entries(presence).filter(([_, entry]) => {
     const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
-    return now - lastSeen < 15000
+    return now - lastSeen < PRESENCE_LIFESPAN_MS
   })
 
   const people = activeEntries.length || 1

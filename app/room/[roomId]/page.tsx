@@ -31,6 +31,7 @@ import {
   subscribeToRoomPresence,
 } from '@/services/room'
 import { getLocalFingerprint } from '@/services/fingerprint'
+import { PRESENCE_LIFESPAN_MS } from '@/lib/presence'
 
 /* ─────────────────────────────── styles ─────────────────────────────── */
 
@@ -424,7 +425,7 @@ export default function RoomPage() {
       const now = Date.now()
       const activeEntries = Object.entries(state.presence).filter(([_, entry]) => {
         const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
-        return now - lastSeen < 15000
+        return now - lastSeen < PRESENCE_LIFESPAN_MS
       })
 
       setPeople(Math.max(1, activeEntries.length))
@@ -511,7 +512,7 @@ export default function RoomPage() {
           const now = Date.now()
           const activeEntries = Object.entries(presence || {}).filter(([_, entry]) => {
             const lastSeen = typeof entry?.lastSeen === 'number' ? entry.lastSeen : 0
-            return now - lastSeen < 15000
+            return now - lastSeen < PRESENCE_LIFESPAN_MS
           })
           setPeople(Math.max(1, activeEntries.length))
           setServerDevices(
