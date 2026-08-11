@@ -4,6 +4,9 @@ import { useCallback, useRef, useState, useEffect, type CSSProperties } from 're
 import { validateFile } from '@/lib/webrtc/fileTransfer'
 import { FILE_TRANSFER_CONFIG } from '@/lib/webrtc/config'
 
+/**
+ * Props for the FileUploader component.
+ */
 interface FileUploaderProps {
   onFileSelected: (file: File) => void
   disabled?: boolean

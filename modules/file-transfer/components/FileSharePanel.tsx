@@ -76,18 +76,6 @@ const S: Record<string, CSSProperties> = {
     border: '1.5px solid var(--cy-border)',
     borderRadius: '4px',
   },
-  testingBanner: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px',
-    backgroundColor: 'rgba(255, 149, 0, 0.1)',
-    border: '1.5px solid var(--cy-warning)',
-    borderRadius: '4px',
-    color: 'var(--cy-text)',
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '12px',
-  },
   transfersSection: {
     display: 'flex',
     flexDirection: 'column',
@@ -261,17 +249,6 @@ export const FileSharePanel = ({
           {statusLabel}
         </div>
       </div>
-
-      {FILE_TRANSFER_CONFIG.TESTING_MODE && (
-        <div style={S.testingBanner}>
-          <span className="material-symbols-outlined" style={{ color: 'var(--cy-warning)', fontSize: '20px' }}>
-            experiment
-          </span>
-          <div>
-            <strong>Temporary Testing Mode:</strong> Generic file transfers up to {(FILE_TRANSFER_CONFIG.MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)}MB are enabled.
-          </div>
-        </div>
-      )}
 
       {/* Uploader */}
       <FileUploader

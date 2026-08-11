@@ -3,6 +3,9 @@
 import { type CSSProperties, useEffect } from 'react'
 import { getFileCategory } from '@/lib/webrtc/fileTransfer'
 
+/**
+ * Props for the FileModal component.
+ */
 interface FileModalProps {
   url: string
   fileName: string
