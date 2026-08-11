@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { WebRTCPeer } from '@/hooks/useWebRTC'
 import { getFileCategory } from '@/lib/webrtc/fileTransfer'
 
+/**
+ * Props for the FilePreview component.
+ */
 interface FilePreviewProps {
   file: File
   onRemove: () => void
