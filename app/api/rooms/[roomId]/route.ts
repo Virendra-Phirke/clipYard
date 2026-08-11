@@ -22,7 +22,7 @@ async function getRoomContext(request: Request, roomId: string) {
   return payload
 }
 
-export async function GET(request: Request, { params }: { params: { roomId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   const resolvedParams = await params
   const roomId = String(resolvedParams.roomId || '').toLowerCase()
   const payload = await getRoomContext(request, roomId)
@@ -65,7 +65,7 @@ export async function GET(request: Request, { params }: { params: { roomId: stri
   })
 }
 
-export async function PATCH(request: Request, { params }: { params: { roomId: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   const resolvedParams = await params
   const roomId = String(resolvedParams.roomId || '').toLowerCase()
   const payload = await getRoomContext(request, roomId)
@@ -94,7 +94,7 @@ export async function PATCH(request: Request, { params }: { params: { roomId: st
   return NextResponse.json({ ok: true })
 }
 
-export async function POST(request: Request, { params }: { params: { roomId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   const resolvedParams = await params
   const roomId = String(resolvedParams.roomId || '').toLowerCase()
   const payload = await getRoomContext(request, roomId)
@@ -104,21 +104,27 @@ export async function POST(request: Request, { params }: { params: { roomId: str
   const fingerprint = request.headers.get('x-device-fingerprint') || payload.sid
   const name = typeof body.name === 'string' ? body.name.trim().slice(0, 24) : ''
   const deviceLabel = typeof body.deviceLabel === 'string' ? body.deviceLabel.trim() : ''
+  const instanceId = typeof body.instanceId === 'string' ? body.instanceId : null
 
   const { database } = getFirebaseAdmin()
-  await database.ref(`rooms/${roomId}/presence/${payload.sid}`).set({
+  const presenceData: any = {
     lastSeen: ServerValue.TIMESTAMP,
     role: payload.role,
     name,
     deviceLabel,
     fingerprint,
     sid: payload.sid,
-  })
+  }
+  if (instanceId) {
+    presenceData.instanceId = instanceId
+  }
+
+  await database.ref(`rooms/${roomId}/presence/${payload.sid}`).set(presenceData)
 
   return NextResponse.json({ ok: true })
 }
 
-export async function DELETE(request: Request, { params }: { params: { roomId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   const resolvedParams = await params
   const roomId = String(resolvedParams.roomId || '').toLowerCase()
   const payload = await getRoomContext(request, roomId)

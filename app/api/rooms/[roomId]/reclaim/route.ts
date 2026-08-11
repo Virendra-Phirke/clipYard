@@ -9,8 +9,8 @@ function getBearerToken(request: Request) {
   return queryToken
 }
 
-export async function POST(request: Request, { params }: { params: { roomId: string } }) {
-  const roomId = String(params.roomId || '').toLowerCase()
+export async function POST(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
+  const roomId = String((await params).roomId || '').toLowerCase()
   const token = getBearerToken(request)
   const payload = await verifyRoomToken(token)
   if (!payload || payload.roomId !== roomId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

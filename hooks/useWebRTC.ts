@@ -41,6 +41,8 @@ interface PeerState {
   unsubscribes: Unsubscribe[]
   /** Prevent processing stale offers after we already connected */
   hasConnected: boolean
+  /** Track the presence instance ID to detect reloads */
+  instanceId?: string
 }
 
 export interface UseWebRTCOptions {
@@ -151,10 +153,10 @@ export function useWebRTC({
     }
   }, [updatePeerStatus, attachChannelHandlers, syncPeerList])
 
-  // Initiate connection to a peer (we are the offerer)
   const initiatePeer = useCallback(async (
     peerId: string,
     peerName: string,
+    instanceId?: string,
   ) => {
     if (peerStatesRef.current.has(peerId)) return
     if (!localUid || !roomId) return
@@ -170,6 +172,7 @@ export function useWebRTC({
       peerName,
       unsubscribes,
       hasConnected: false,
+      instanceId,
     }
     peerStatesRef.current.set(peerId, state)
     syncPeerList()
@@ -221,11 +224,11 @@ export function useWebRTC({
     }
   }, [roomId, localUid, syncPeerList, attachConnectionHandlers, attachChannelHandlers, updatePeerStatus])
 
-  // Respond to an incoming offer (we are the answerer)
   const respondToPeer = useCallback(async (
     peerId: string,
     peerName: string,
     offer: SignalingOffer,
+    instanceId?: string,
   ) => {
     if (peerStatesRef.current.has(peerId)) return
     if (!localUid || !roomId) return
@@ -240,6 +243,7 @@ export function useWebRTC({
       peerName,
       unsubscribes,
       hasConnected: false,
+      instanceId,
     }
     peerStatesRef.current.set(peerId, state)
     syncPeerList()
@@ -300,17 +304,28 @@ export function useWebRTC({
 
     const presenceUids = Object.keys(presence).filter((uid) => uid !== localUid)
 
+    // Detect stale sessions (e.g. peer reloaded tab but kept same UID)
+    for (const uid of presenceUids) {
+      const state = peerStatesRef.current.get(uid)
+      const currentInstanceId = presence[uid]?.instanceId as string | undefined
+      if (state && state.instanceId && currentInstanceId && state.instanceId !== currentInstanceId) {
+        console.log(`[WebRTC] Peer ${uid} reloaded (instanceId changed). Tearing down old connection.`)
+        destroyPeer(uid)
+      }
+    }
+
     // Connect to new peers
     for (const uid of presenceUids) {
       if (peerStatesRef.current.has(uid)) continue
       if (processedPeersRef.current.has(uid)) continue
 
       const peerName = (presence[uid]?.name as string) || 'Participant'
+      const instanceId = presence[uid]?.instanceId as string | undefined
 
       // Deterministic initiator: higher UID creates the offer
       if (localUid > uid) {
         processedPeersRef.current.add(uid)
-        initiatePeer(uid, peerName).catch(console.error)
+        initiatePeer(uid, peerName, instanceId).catch(console.error)
       }
       // If localUid < uid, we wait for their offer (handled by listenForIncomingOffers)
     }
@@ -337,12 +352,13 @@ export function useWebRTC({
       // Higher UIDs are initiators; we listen for their offer
       if (localUid < uid) {
         const peerName = (presence[uid]?.name as string) || 'Participant'
+        const instanceId = presence[uid]?.instanceId as string | undefined
         const unsub = listenForOffer(roomId, localUid, uid, (offer) => {
           if (peerStatesRef.current.has(uid)) return
           if (processedPeersRef.current.has(uid)) return
 
           processedPeersRef.current.add(uid)
-          respondToPeer(uid, peerName, offer).catch(console.error)
+          respondToPeer(uid, peerName, offer, instanceId).catch(console.error)
         })
         unsubs.push(unsub)
       }

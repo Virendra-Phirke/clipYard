@@ -356,6 +356,14 @@ export default function RoomPage() {
   const dirtyRef = useRef(false)
   const textRef = useRef('')
   const lastKnownUpdatedAtRef = useRef<number | undefined>(undefined)
+  
+  const instanceId = useMemo(() => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID()
+    }
+    return Math.random().toString(36).substring(2, 15)
+  }, [])
+
   const saveTimerRef = useRef<number | null>(null)
   const heartbeatTimerRef = useRef<number | null>(null)
   const lifespanTimerRef = useRef<number | null>(null)
@@ -527,7 +535,7 @@ export default function RoomPage() {
         }
         setRole(effectiveRole)
         setConnection('connected')
-        await sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '')
+        await sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '', instanceId)
         await loadSnapshot()
 
         const handleUnload = () => sendLeaveBeacon(roomId, tokenRef.current, fingerprintRef.current)
@@ -575,7 +583,7 @@ export default function RoomPage() {
         }, 1000)
 
         heartbeatTimerRef.current = window.setInterval(() => {
-          sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '')
+          sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '', instanceId)
             .catch(() => setConnection('offline'))
         }, 5000)
       } catch (error) {
