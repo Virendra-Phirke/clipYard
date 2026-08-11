@@ -4,6 +4,7 @@ import Image from 'next/image'
 import ImageSharePanel from '@/components/image-sharing/ImageSharePanel'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useDebounce } from 'use-debounce'
 import { QRCodeSVG } from 'qrcode.react'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { useTheme } from '@/components/ThemeProvider'
@@ -339,6 +340,7 @@ export default function RoomPage() {
   const displayId = roomId.toUpperCase()
 
   const [text, setText] = useState('')
+  const [debouncedText] = useDebounce(text, 1000)
   const [status, setStatus] = useState<'loading' | 'ready' | 'closed' | 'error'>('loading')
   const [connection, setConnection] = useState<'connecting' | 'connected' | 'offline'>('connecting')
   const [role, setRole] = useState<'host' | 'participant'>('participant')
@@ -364,7 +366,6 @@ export default function RoomPage() {
     return Math.random().toString(36).substring(2, 15)
   }, [])
 
-  const saveTimerRef = useRef<number | null>(null)
   const heartbeatTimerRef = useRef<number | null>(null)
   const lifespanTimerRef = useRef<number | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -598,22 +599,35 @@ export default function RoomPage() {
     return () => {
       alive = false
       cleanupRef.current?.()
-      if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current)
       if (heartbeatTimerRef.current !== null) window.clearInterval(heartbeatTimerRef.current)
     }
   }, [roomId, router, userName])
 
-  function queueSave(nextText: string) {
+  useEffect(() => {
+    // Only auto-save if there's a local un-saved change and we have a token
+    if (!userName || !dirtyRef.current || !tokenRef.current) return
+    
+    let alive = true
+    saveText(roomId, tokenRef.current, debouncedText, fingerprintRef.current)
+      .then(() => {
+        if (!alive) return
+        dirtyRef.current = false
+        setSaved(true)
+        setConnection('connected')
+      })
+      .catch(() => {
+        if (!alive) return
+        setConnection('offline')
+      })
+      
+    return () => { alive = false }
+  }, [debouncedText, roomId, userName])
+
+  function handleTextChange(nextText: string) {
     textRef.current = nextText
     dirtyRef.current = true
     setText(nextText)
     setSaved(false)
-    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = window.setTimeout(() => {
-      saveText(roomId, tokenRef.current, textRef.current, fingerprintRef.current)
-        .then(() => { dirtyRef.current = false; setSaved(true); setConnection('connected') })
-        .catch(() => setConnection('offline'))
-    }, 350)
   }
 
   async function copyClipboard() {
@@ -782,7 +796,7 @@ export default function RoomPage() {
             <textarea
               id="clipboard-textarea"
               value={text}
-              onChange={(e) => queueSave(e.target.value)}
+              onChange={(e) => handleTextChange(e.target.value)}
               placeholder="Paste or type text here..."
               spellCheck={false}
               style={S.textarea}
@@ -810,7 +824,7 @@ export default function RoomPage() {
             {role === 'host' && (
               <button
                 id="clear-btn"
-                onClick={() => queueSave('')}
+                onClick={() => handleTextChange('')}
                 style={S.clearBtn}
                 onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
