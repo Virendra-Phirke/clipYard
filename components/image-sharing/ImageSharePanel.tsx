@@ -14,6 +14,8 @@ import ImageUploader from './ImageUploader'
 import ImagePreview from './ImagePreview'
 import ImageTransferCard from './ImageTransferCard'
 import ReceivedImageCard from './ReceivedImageCard'
+import ImageModal from './ImageModal'
+import type { Transfer } from '@/lib/webrtc/types'
 
 interface ImageSharePanelProps {
   roomId: string
@@ -134,6 +136,7 @@ export default function ImageSharePanel({
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [viewingImage, setViewingImage] = useState<Transfer | null>(null)
 
   const handleImageSelected = useCallback((file: File) => {
     setError(null)
@@ -159,6 +162,13 @@ export default function ImageSharePanel({
     setError(null)
   }, [])
 
+  const handleCancelBatch = useCallback((batchId: string) => {
+    // Find all transfers in this batch and cancel them
+    transfers.filter((t) => t.batchId === batchId || t.id === batchId).forEach((t) => {
+      cancelTransfer(t.id)
+    })
+  }, [transfers, cancelTransfer])
+
   // Categorize transfers
   const activeTransfers = transfers.filter(
     (t) => t.status === 'transferring' || t.status === 'pending',
@@ -167,9 +177,46 @@ export default function ImageSharePanel({
     (t) => t.status === 'completed' && t.direction === 'received',
   )
   const failedTransfers = transfers.filter((t) => t.status === 'failed')
+  
+  // Aggregate completed sent transfers by batchId so the summary count is accurate
   const completedSent = transfers.filter(
     (t) => t.status === 'completed' && t.direction === 'sent',
   )
+  const uniqueCompletedSentBatches = new Set(
+    completedSent.map((t) => t.batchId || t.id)
+  )
+
+  // Group active sent transfers by batchId
+  const activeSentGroups = new Map<string, Transfer[]>()
+  const activeReceived: Transfer[] = []
+  
+  for (const t of activeTransfers) {
+    if (t.direction === 'sent') {
+      const bId = t.batchId || t.id
+      const group = activeSentGroups.get(bId) || []
+      group.push(t)
+      activeSentGroups.set(bId, group)
+    } else {
+      activeReceived.push(t)
+    }
+  }
+
+  // Create aggregated transfers for rendering
+  const aggregatedActiveTransfers = [
+    ...activeReceived,
+    ...Array.from(activeSentGroups.values()).map(group => {
+      // Calculate aggregate progress
+      const totalProgress = group.reduce((sum, t) => sum + t.progress, 0)
+      const avgProgress = Math.round(totalProgress / group.length)
+      // Return a merged representation
+      return {
+        ...group[0],
+        id: group[0].batchId || group[0].id, // use batchId as key for rendering and cancelling
+        progress: avgProgress,
+        peerName: `Everyone (${group.length})`,
+      }
+    })
+  ]
 
   // Connection status
   const hasAnyPeer = peers.length > 0
@@ -241,14 +288,14 @@ export default function ImageSharePanel({
       )}
 
       {/* Active transfers */}
-      {activeTransfers.length > 0 && (
+      {aggregatedActiveTransfers.length > 0 && (
         <div style={S.transfersSection}>
           <div style={S.subTitle}>Active Transfers</div>
-          {activeTransfers.map((t) => (
+          {aggregatedActiveTransfers.map((t) => (
             <ImageTransferCard
               key={t.id}
               transfer={t}
-              onCancel={cancelTransfer}
+              onCancel={t.direction === 'sent' ? handleCancelBatch : cancelTransfer}
             />
           ))}
         </div>
@@ -276,6 +323,7 @@ export default function ImageSharePanel({
                 key={t.id}
                 transfer={t}
                 onDownload={downloadImage}
+                onView={setViewingImage}
               />
             ))}
           </div>
@@ -283,12 +331,21 @@ export default function ImageSharePanel({
       )}
 
       {/* Sent summary */}
-      {completedSent.length > 0 && (
+      {uniqueCompletedSentBatches.size > 0 && (
         <div style={S.transfersSection}>
           <div style={S.subTitle}>
-            {completedSent.length} image{completedSent.length !== 1 ? 's' : ''} sent
+            {uniqueCompletedSentBatches.size} image{uniqueCompletedSentBatches.size !== 1 ? 's' : ''} sent
           </div>
         </div>
+      )}
+
+      {/* Full screen modal */}
+      {viewingImage && viewingImage.objectUrl && (
+        <ImageModal
+          url={viewingImage.objectUrl}
+          fileName={viewingImage.fileName}
+          onClose={() => setViewingImage(null)}
+        />
       )}
     </div>
   )
