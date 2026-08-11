@@ -821,17 +821,15 @@ export default function RoomPage() {
             >
               {copied ? '✓ COPIED' : 'COPY CLIPBOARD'}
             </button>
-            {role === 'host' && (
-              <button
-                id="clear-btn"
-                onClick={() => handleTextChange('')}
-                style={S.clearBtn}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                CLEAR
-              </button>
-            )}
+            <button
+              id="clear-btn"
+              onClick={() => handleTextChange('')}
+              style={S.clearBtn}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              CLEAR
+            </button>
           </div>
 
           {/* Image Sharing */}
