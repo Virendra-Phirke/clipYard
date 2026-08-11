@@ -13,6 +13,7 @@ import type { Transfer } from '@/lib/webrtc/types'
 interface ReceivedImageCardProps {
   transfer: Transfer
   onDownload: (transfer: Transfer) => void
+  onView: (transfer: Transfer) => void
 }
 
 function formatBytes(bytes: number): string {
@@ -121,14 +122,13 @@ const S: Record<string, CSSProperties> = {
 export default function ReceivedImageCard({
   transfer,
   onDownload,
+  onView,
 }: ReceivedImageCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [isImgHovered, setIsImgHovered] = useState(false)
 
   const handleOpen = () => {
-    if (transfer.objectUrl) {
-      window.open(transfer.objectUrl, '_blank', 'noopener')
-    }
+    onView(transfer)
   }
 
   return (

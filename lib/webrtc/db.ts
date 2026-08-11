@@ -1,0 +1,70 @@
+/**
+ * lib/webrtc/db.ts
+ *
+ * IndexedDB wrapper for persisting received images across page reloads.
+ */
+
+const DB_NAME = 'ClipYardDB'
+const DB_VERSION = 1
+const STORE_NAME = 'images'
+
+export interface StoredImage {
+  id: string
+  roomId: string
+  fileName: string
+  fileSize: number
+  mimeType: string
+  blob: Blob
+  createdAt: number
+  peerId: string
+  peerName: string
+}
+
+function getDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
+
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => resolve(request.result)
+
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' })
+        // Create an index to easily query by room
+        store.createIndex('roomId', 'roomId', { unique: false })
+      }
+    }
+  })
+}
+
+export async function saveImageToDB(image: StoredImage): Promise<void> {
+  const db = await getDB()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readwrite')
+    const store = transaction.objectStore(STORE_NAME)
+    const request = store.put(image)
+
+    request.onsuccess = () => resolve()
+    request.onerror = () => reject(request.error)
+  })
+}
+
+export async function getImagesByRoom(roomId: string): Promise<StoredImage[]> {
+  const db = await getDB()
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([STORE_NAME], 'readonly')
+    const store = transaction.objectStore(STORE_NAME)
+    const index = store.index('roomId')
+    const request = index.getAll(roomId)
+
+    request.onsuccess = () => {
+      // Sort descending by createdAt so newest are first
+      const results = (request.result as StoredImage[]).sort(
+        (a, b) => b.createdAt - a.createdAt
+      )
+      resolve(results)
+    }
+    request.onerror = () => reject(request.error)
+  })
+}

@@ -74,36 +74,6 @@ const S: Record<string, CSSProperties> = {
     color: 'var(--cy-text-muted)',
     letterSpacing: '0.02em',
   },
-  targetSelector: {
-    padding: '8px 16px',
-    borderTop: '1.5px solid var(--cy-border)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-  },
-  targetLabel: {
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '11px',
-    lineHeight: '14px',
-    color: 'var(--cy-text-muted)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-  },
-  radioGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-  },
-  radioItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '12px',
-    lineHeight: '16px',
-    color: 'var(--cy-text-secondary)',
-    cursor: 'pointer',
-  },
   actions: {
     display: 'flex',
     gap: '8px',
@@ -151,7 +121,6 @@ export default function ImagePreview({
 }: ImagePreviewProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [dimensions, setDimensions] = useState<{ w: number; h: number } | null>(null)
-  const [target, setTarget] = useState<string>('everyone')
   const [isImgHovered, setIsImgHovered] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const urlRef = useRef<string | null>(null)
@@ -182,7 +151,7 @@ export default function ImagePreview({
 
   const handleSend = () => {
     if (sending) return
-    onSend(target === 'everyone' ? undefined : target)
+    onSend()
   }
 
   const noPeers = connectedPeers.length === 0
@@ -223,37 +192,6 @@ export default function ImagePreview({
           {dimensions ? ` · ${dimensions.w}×${dimensions.h}` : ''}
         </div>
       </div>
-
-      {/* Target selector */}
-      {connectedPeers.length > 1 && (
-        <div style={S.targetSelector}>
-          <div style={S.targetLabel}>Send to:</div>
-          <div style={S.radioGroup}>
-            <label style={S.radioItem}>
-              <input
-                type="radio"
-                name="send-target"
-                value="everyone"
-                checked={target === 'everyone'}
-                onChange={() => setTarget('everyone')}
-              />
-              Everyone
-            </label>
-            {connectedPeers.map((peer) => (
-              <label key={peer.peerId} style={S.radioItem}>
-                <input
-                  type="radio"
-                  name="send-target"
-                  value={peer.peerId}
-                  checked={target === peer.peerId}
-                  onChange={() => setTarget(peer.peerId)}
-                />
-                {peer.peerName}
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Actions */}
       <div style={S.actions}>

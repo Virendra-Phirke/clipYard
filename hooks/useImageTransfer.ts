@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useWebRTC, type UseWebRTCReturn } from './useWebRTC'
 import { sendFile, validateImage, generateTransferId, FileReceiver } from '@/lib/webrtc/fileTransfer'
 import { parseIncomingMessage } from '@/lib/webrtc/dataChannel'
+import { getImagesByRoom, saveImageToDB } from '@/lib/webrtc/db'
 import type {
   Transfer,
   TransferStatus,
@@ -54,7 +55,43 @@ export function useImageTransfer({
   const abortControllersRef = useRef(new Map<string, AbortController>())
   const fileReceiversRef = useRef(new Map<string, FileReceiver>())
   const objectUrlsRef = useRef(new Set<string>())
-  const removalTimeoutsRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const [hasLoadedDB, setHasLoadedDB] = useState(false)
+
+  // Load persisted images from IndexedDB on mount
+  useEffect(() => {
+    if (!roomId || hasLoadedDB) return
+
+    getImagesByRoom(roomId).then((storedImages) => {
+      const restoredTransfers: Transfer[] = storedImages.map((img) => {
+        const url = URL.createObjectURL(img.blob)
+        objectUrlsRef.current.add(url)
+
+        return {
+          id: img.id,
+          fileName: img.fileName,
+          fileSize: img.fileSize,
+          mimeType: img.mimeType,
+          direction: 'received',
+          peerId: img.peerId,
+          peerName: img.peerName,
+          status: 'completed',
+          progress: 100,
+          createdAt: img.createdAt,
+          objectUrl: url,
+          blob: img.blob,
+        }
+      })
+
+      if (restoredTransfers.length > 0) {
+        setTransfers((prev) => {
+          const existingIds = new Set(prev.map(t => t.id))
+          const newTransfers = restoredTransfers.filter(t => !existingIds.has(t.id))
+          return [...prev, ...newTransfers]
+        })
+      }
+      setHasLoadedDB(true)
+    }).catch(console.error)
+  }, [roomId, hasLoadedDB])
 
   // Handle incoming DataChannel messages
   const handleMessage = useCallback((peerId: string, event: MessageEvent) => {
@@ -118,18 +155,18 @@ export function useImageTransfer({
               blob,
             })
 
-            // Automatically remove the received image after 2 minutes
-            const timer = setTimeout(() => {
-              setTransfers((prev) => prev.filter((t) => t.id !== transferId))
-              // Delay revocation slightly to ensure React has unmounted the component first
-              // to prevent the browser from trying to render a revoked blob URL
-              setTimeout(() => {
-                URL.revokeObjectURL(url)
-                objectUrlsRef.current.delete(url)
-              }, 1000)
-              removalTimeoutsRef.current.delete(transferId)
-            }, 2 * 60 * 1000)
-            removalTimeoutsRef.current.set(transferId, timer)
+            // Persist to IndexedDB
+            saveImageToDB({
+              id: metadata.transferId,
+              roomId,
+              fileName: metadata.fileName,
+              fileSize: metadata.size,
+              mimeType: metadata.mimeType,
+              blob,
+              createdAt: Date.now(),
+              peerId: peer.peerId,
+              peerName: metadata.senderName || peer.peerName,
+            }).catch(console.error)
           },
           onError: (transferId: string, error: string) => {
             updateTransfer(transferId, { status: 'failed', error })
@@ -154,23 +191,19 @@ export function useImageTransfer({
     }
   }, [webrtc.peers, updateTransfer])
 
-  const sendImage = useCallback(async (file: File, targetPeerId?: string) => {
+  const sendImage = useCallback(async (file: File) => {
     const validation = validateImage(file)
     if (!validation.valid) {
       throw new Error(validation.error)
     }
 
-    const channels = targetPeerId
-      ? (() => {
-          const ch = webrtc.getChannel(targetPeerId)
-          const peer = webrtc.peers.find((p) => p.peerId === targetPeerId)
-          return ch ? [{ peerId: targetPeerId, peerName: peer?.peerName || 'Peer', channel: ch }] : []
-        })()
-      : webrtc.getAllChannels()
+    const channels = webrtc.getAllChannels()
 
     if (channels.length === 0) {
       throw new Error('No connected peers to send to')
     }
+
+    const batchId = generateTransferId() // Generate once for the entire batch
 
     // Send to each target peer
     const sendPromises = channels.map(async ({ peerId, peerName, channel }) => {
@@ -180,6 +213,7 @@ export function useImageTransfer({
 
       const newTransfer: Transfer = {
         id: transferId,
+        batchId,
         fileName: file.name || 'image',
         fileSize: file.size,
         mimeType: file.type,
@@ -254,10 +288,6 @@ export function useImageTransfer({
         controller.abort()
       }
       abortControllersRef.current.clear()
-      for (const [, timer] of removalTimeoutsRef.current) {
-        clearTimeout(timer)
-      }
-      removalTimeoutsRef.current.clear()
     }
   }, [])
 

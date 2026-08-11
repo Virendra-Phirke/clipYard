@@ -74,6 +74,7 @@ export type TransferStatus = 'pending' | 'transferring' | 'completed' | 'failed'
 
 export interface Transfer {
   id: string
+  batchId?: string
   fileName: string
   fileSize: number
   mimeType: string
