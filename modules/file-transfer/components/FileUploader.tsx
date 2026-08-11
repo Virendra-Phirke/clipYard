@@ -1,17 +1,11 @@
-/**
- * components/image-sharing/ImageUploader.tsx
- *
- * Drop zone + file picker + clipboard paste handler for image selection.
- * Validates image type and size immediately on selection.
- */
-
 'use client'
 
 import { useCallback, useRef, useState, useEffect, type CSSProperties } from 'react'
-import { validateImage } from '@/lib/webrtc/fileTransfer'
+import { validateFile } from '@/lib/webrtc/fileTransfer'
+import { FILE_TRANSFER_CONFIG } from '@/lib/webrtc/config'
 
-interface ImageUploaderProps {
-  onImageSelected: (file: File) => void
+interface FileUploaderProps {
+  onFileSelected: (file: File) => void
   disabled?: boolean
 }
 
@@ -104,7 +98,7 @@ const styles: Record<string, CSSProperties> = {
   },
 }
 
-export default function ImageUploader({ onImageSelected, disabled }: ImageUploaderProps) {
+export const FileUploader = ({ onFileSelected, disabled }: FileUploaderProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
@@ -112,58 +106,62 @@ export default function ImageUploader({ onImageSelected, disabled }: ImageUpload
   const [error, setError] = useState<string | null>(null)
   const dragCounterRef = useRef(0)
 
-  const processFile = useCallback((file: File) => {
+  const processFiles = useCallback((files: FileList | File[]) => {
     setError(null)
-    const validation = validateImage(file)
-    if (!validation.valid) {
-      setError(validation.error || 'Invalid image')
-      return
+    for (const file of Array.from(files)) {
+      const validation = validateFile(file)
+      if (!validation.valid) {
+        setError(validation.error || `Invalid file: ${file.name}`)
+        continue
+      }
+      onFileSelected(file)
     }
-    onImageSelected(file)
-  }, [onImageSelected])
+  }, [onFileSelected])
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (disabled) return
     fileInputRef.current?.click()
-  }
+  }, [disabled])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) processFile(file)
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files && files.length > 0) {
+      processFiles(files)
+    }
     // Reset so the same file can be selected again
     if (fileInputRef.current) fileInputRef.current.value = ''
-  }
+  }, [processFiles])
 
-  const handleDragEnter = (e: React.DragEvent) => {
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     if (disabled) return
     dragCounterRef.current++
     if (dragCounterRef.current === 1) setIsDragging(true)
-  }
+  }, [disabled])
 
-  const handleDragLeave = (e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     dragCounterRef.current--
     if (dragCounterRef.current === 0) setIsDragging(false)
-  }
+  }, [])
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-  }
+  }, [])
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
     dragCounterRef.current = 0
     if (disabled) return
 
-    const file = e.dataTransfer.files?.[0]
-    if (file) processFile(file)
-  }
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) processFiles(files)
+  }, [disabled, processFiles])
 
   // Clipboard paste handler
   useEffect(() => {
@@ -173,20 +171,22 @@ export default function ImageUploader({ onImageSelected, disabled }: ImageUpload
       const items = e.clipboardData?.items
       if (!items) return
 
+      const filesToProcess: File[] = []
       for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault()
+        if (item.kind === 'file') {
           const file = item.getAsFile()
-          if (file) processFile(file)
-          return
+          if (file) filesToProcess.push(file)
         }
       }
-      // Non-image paste — don't interfere with the clipboard textarea
+      if (filesToProcess.length > 0) {
+        e.preventDefault()
+        processFiles(filesToProcess)
+      }
     }
 
     window.addEventListener('paste', handlePaste)
     return () => window.removeEventListener('paste', handlePaste)
-  }, [disabled, processFile])
+  }, [disabled, processFiles])
 
   const zoneStyle: CSSProperties = {
     ...styles.dropZone,
@@ -195,6 +195,8 @@ export default function ImageUploader({ onImageSelected, disabled }: ImageUpload
     ...(isFocused && !disabled ? { boxShadow: '0 0 0 2px var(--cy-background), 0 0 0 4px var(--cy-primary)' } : {}),
     ...(disabled ? styles.dropZoneDisabled : {}),
   }
+
+  const limitMB = (FILE_TRANSFER_CONFIG.MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
 
   return (
     <div>
@@ -217,7 +219,7 @@ export default function ImageUploader({ onImageSelected, disabled }: ImageUpload
             handleClick()
           }
         }}
-        aria-label="Select or drop an image to share"
+        aria-label="Select or drop a file to share"
       >
         <div style={{
           ...styles.iconContainer,
@@ -225,23 +227,23 @@ export default function ImageUploader({ onImageSelected, disabled }: ImageUpload
           ...(isDragging && !disabled ? styles.iconContainerActive : {})
         }}>
           <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>
-            {isDragging ? 'file_download' : 'add_photo_alternate'}
+            {isDragging ? 'file_download' : 'add_circle'}
           </span>
         </div>
         
         <span style={styles.label}>
-          {isDragging ? 'Drop it like it\'s hot!' : (
-            <>Drop image here or <span style={styles.labelHighlight}>click to browse</span></>
+          {isDragging ? 'Drop files here!' : (
+            <>Drop files here or <span style={styles.labelHighlight}>click to browse</span></>
           )}
         </span>
         <span style={styles.sublabel}>
-          Paste (Ctrl+V) · Max 10 MB <br/>
-          JPEG, PNG, WebP, GIF, SVG
+          Paste (Ctrl+V) · Max {limitMB} MB <br/>
+          Images, Videos, Documents
         </span>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/svg+xml"
+          multiple
           onChange={handleFileChange}
           style={{ display: 'none' }}
           aria-hidden

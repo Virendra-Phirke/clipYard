@@ -1,16 +1,9 @@
-/**
- * components/image-sharing/ReceivedImageCard.tsx
- *
- * Card for a completed received image.
- * Shows preview, metadata, sender info, and download/open buttons.
- */
-
 'use client'
 
 import { useState, type CSSProperties } from 'react'
 import type { Transfer } from '@/lib/webrtc/types'
 
-interface ReceivedImageCardProps {
+interface ReceivedFileCardProps {
   transfer: Transfer
   onDownload: (transfer: Transfer) => void
   onView: (transfer: Transfer) => void
@@ -20,6 +13,15 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function getIconForCategory(category: string): string {
+  switch (category) {
+    case 'image': return 'image'
+    case 'video': return 'movie'
+    case 'document': return 'description'
+    default: return 'insert_drive_file'
+  }
 }
 
 const S: Record<string, CSSProperties> = {
@@ -34,21 +36,26 @@ const S: Record<string, CSSProperties> = {
     overflow: 'hidden',
     transition: 'border-color 0.2s ease, transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   },
-  imageContainer: {
+  previewContainer: {
     width: '100%',
-    maxHeight: '200px',
+    height: '140px',
     overflow: 'hidden',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'var(--cy-surface-container)',
     cursor: 'pointer',
+    position: 'relative',
   },
-  img: {
+  previewMedia: {
     maxWidth: '100%',
-    maxHeight: '200px',
-    objectFit: 'contain',
+    maxHeight: '140px',
+    objectFit: 'cover',
     transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+  genericIcon: {
+    fontSize: '48px',
+    color: 'var(--cy-text-muted)',
   },
   body: {
     padding: '10px 14px',
@@ -80,7 +87,7 @@ const S: Record<string, CSSProperties> = {
     borderTop: '1.5px solid var(--cy-border)',
     backgroundColor: 'var(--cy-surface-container)',
   },
-  downloadBtn: {
+  actionBtn: {
     flex: 1,
     display: 'flex',
     alignItems: 'center',
@@ -99,36 +106,27 @@ const S: Record<string, CSSProperties> = {
     textTransform: 'uppercase',
     transition: 'background-color 0.2s ease',
   },
-  openBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '6px',
+  secondaryBtn: {
     backgroundColor: 'transparent',
     color: 'var(--cy-secondary-text)',
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '11px',
-    letterSpacing: '0.05em',
-    fontWeight: 500,
-    padding: '6px 12px',
-    borderRadius: '4px',
-    border: '1.5px solid var(--cy-border)',
-    cursor: 'pointer',
-    textTransform: 'uppercase',
-    transition: 'background-color 0.2s ease',
-  },
+    borderColor: 'var(--cy-border)',
+  }
 }
 
-export default function ReceivedImageCard({
+export const ReceivedFileCard = ({
   transfer,
   onDownload,
   onView,
-}: ReceivedImageCardProps) {
+}: ReceivedFileCardProps) => {
   const [isHovered, setIsHovered] = useState(false)
-  const [isImgHovered, setIsImgHovered] = useState(false)
+  const [isPreviewHovered, setIsPreviewHovered] = useState(false)
 
   const handleOpen = () => {
-    onView(transfer)
+    if (transfer.category === 'image' || transfer.category === 'video') {
+      onView(transfer)
+    } else {
+      onDownload(transfer) // Documents/Files usually just download on click
+    }
   }
 
   return (
@@ -141,28 +139,42 @@ export default function ReceivedImageCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Preview thumbnail */}
-      {transfer.objectUrl && (
-        <div
-          style={S.imageContainer}
-          onClick={handleOpen}
-          title="Click to open full size"
-          onMouseEnter={() => setIsImgHovered(true)}
-          onMouseLeave={() => setIsImgHovered(false)}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+      <div
+        style={S.previewContainer}
+        onClick={handleOpen}
+        title={transfer.category === 'image' || transfer.category === 'video' ? "Click to open full size" : "Click to download"}
+        onMouseEnter={() => setIsPreviewHovered(true)}
+        onMouseLeave={() => setIsPreviewHovered(false)}
+      >
+        {transfer.objectUrl && transfer.category === 'image' ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
           <img
             src={transfer.objectUrl}
-            alt={`Received: ${transfer.fileName}`}
+            alt={transfer.fileName}
             style={{
-              ...S.img,
-              transform: isImgHovered ? 'scale(1.05)' : 'scale(1)',
+              ...S.previewMedia,
+              transform: isPreviewHovered ? 'scale(1.05)' : 'scale(1)',
             }}
           />
-        </div>
-      )}
+        ) : transfer.objectUrl && transfer.category === 'video' ? (
+          <video
+            src={transfer.objectUrl}
+            style={{
+              ...S.previewMedia,
+              transform: isPreviewHovered ? 'scale(1.05)' : 'scale(1)',
+            }}
+          />
+        ) : (
+          <span className="material-symbols-outlined" style={{
+            ...S.genericIcon,
+            transform: isPreviewHovered ? 'scale(1.1)' : 'scale(1)',
+            transition: 'transform 0.3s ease',
+          }}>
+            {getIconForCategory(transfer.category)}
+          </span>
+        )}
+      </div>
 
-      {/* File metadata */}
       <div style={S.body}>
         <div style={S.fileName} title={transfer.fileName}>
           {transfer.fileName}
@@ -172,11 +184,10 @@ export default function ReceivedImageCard({
         </div>
       </div>
 
-      {/* Action buttons */}
       <div style={S.actions}>
         <button
           onClick={() => onDownload(transfer)}
-          style={S.downloadBtn}
+          style={S.actionBtn}
           type="button"
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = 'var(--cy-primary-hover)'
@@ -190,22 +201,24 @@ export default function ReceivedImageCard({
           </span>
           Download
         </button>
-        <button
-          onClick={handleOpen}
-          style={S.openBtn}
-          type="button"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent'
-          }}
-        >
-          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
-            open_in_new
-          </span>
-          Open
-        </button>
+        {(transfer.category === 'image' || transfer.category === 'video') && (
+          <button
+            onClick={handleOpen}
+            style={{ ...S.actionBtn, ...S.secondaryBtn }}
+            type="button"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>
+              open_in_new
+            </span>
+            Open
+          </button>
+        )}
       </div>
     </div>
   )

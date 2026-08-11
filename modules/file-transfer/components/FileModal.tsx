@@ -1,10 +1,12 @@
 'use client'
 
 import { type CSSProperties, useEffect } from 'react'
+import { getFileCategory } from '@/lib/webrtc/fileTransfer'
 
-interface ImageModalProps {
+interface FileModalProps {
   url: string
   fileName: string
+  mimeType: string
   onClose: () => void
 }
 
@@ -55,7 +57,7 @@ const S: Record<string, CSSProperties> = {
     justifyContent: 'center',
     transition: 'background 0.2s',
   },
-  imageContainer: {
+  mediaContainer: {
     position: 'relative',
     maxWidth: '100%',
     maxHeight: '100%',
@@ -63,7 +65,7 @@ const S: Record<string, CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  image: {
+  media: {
     maxWidth: '100%',
     maxHeight: 'calc(100vh - 48px)',
     objectFit: 'contain',
@@ -72,7 +74,9 @@ const S: Record<string, CSSProperties> = {
   },
 }
 
-export default function ImageModal({ url, fileName, onClose }: ImageModalProps) {
+export const FileModal = ({ url, fileName, mimeType, onClose }: FileModalProps) => {
+  const category = getFileCategory(mimeType)
+
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -104,9 +108,13 @@ export default function ImageModal({ url, fileName, onClose }: ImageModalProps) 
         </button>
       </div>
       
-      <div style={S.imageContainer} onClick={(e) => e.stopPropagation()}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={fileName} style={S.image} />
+      <div style={S.mediaContainer} onClick={(e) => e.stopPropagation()}>
+        {category === 'video' ? (
+          <video src={url} controls autoPlay style={S.media} />
+        ) : (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={url} alt={fileName} style={S.media} />
+        )}
       </div>
     </div>
   )

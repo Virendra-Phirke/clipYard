@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import ImageSharePanel from '@/components/image-sharing/ImageSharePanel'
+import { FileSharePanel } from '@/modules/file-transfer'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useDebounce } from 'use-debounce'
@@ -832,9 +832,9 @@ export default function RoomPage() {
             </button>
           </div>
 
-          {/* Image Sharing */}
+          {/* File Sharing */}
           {firebaseUidRef.current && (
-            <ImageSharePanel
+            <FileSharePanel
               roomId={roomId}
               localUid={firebaseUidRef.current}
               localName={userName ?? ''}

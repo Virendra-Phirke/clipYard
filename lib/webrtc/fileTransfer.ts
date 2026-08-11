@@ -3,45 +3,66 @@
  *
  * Chunked file transfer engine for WebRTC DataChannel.
  *
- * Sending: slices a File into CHUNK_SIZE chunks with backpressure control.
+ * Sending: slices a File into chunks with backpressure control.
  * Receiving: collects chunks keyed by transferId and reconstructs a Blob.
  */
 
 'use client'
 
 import {
-  ALLOWED_IMAGE_TYPES,
-  CHUNK_SIZE,
-  MAX_BUFFERED_AMOUNT,
-  MAX_IMAGE_SIZE,
-  type ImageTransferMetadata,
-  type ImageTransferComplete,
-  type ImageTransferCancel,
-  type ImageChunkHeader,
+  type FileTransferMetadata,
+  type FileTransferComplete,
+  type FileTransferCancel,
+  type FileChunkHeader,
   type DataChannelMessage,
 } from './types'
 import { sendControlMessage } from './dataChannel'
+import { FILE_TRANSFER_CONFIG } from './config'
 
-// ─── Validation ─────────────────────────────────────────────────────────────
+// ─── Validation & Categorization ────────────────────────────────────────────
 
-export function validateImage(file: File): { valid: boolean; error?: string } {
-  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+export function getFileCategory(mimeType: string): 'image' | 'video' | 'document' | 'file' {
+  if (mimeType.startsWith('image/')) return 'image'
+  if (mimeType.startsWith('video/')) return 'video'
+  if (
+    mimeType.startsWith('text/') ||
+    mimeType === 'application/pdf' ||
+    mimeType === 'application/msword' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mimeType === 'application/vnd.ms-excel' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    mimeType === 'application/vnd.ms-powerpoint' ||
+    mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' ||
+    mimeType === 'text/csv'
+  ) {
+    return 'document'
+  }
+  return 'file'
+}
+
+export function validateFile(file: File): { valid: boolean; error?: string } {
+  const category = getFileCategory(file.type)
+  
+  if (!FILE_TRANSFER_CONFIG.ALLOWED_CATEGORIES.includes(category)) {
     return {
       valid: false,
-      error: `Unsupported image type: ${file.type || 'unknown'}. Allowed: JPEG, PNG, WebP, GIF, BMP, SVG.`,
+      error: `Unsupported file category: ${category}. Allowed: ${FILE_TRANSFER_CONFIG.ALLOWED_CATEGORIES.join(', ')}.`,
     }
   }
-  if (file.size > MAX_IMAGE_SIZE) {
+
+  if (file.size > FILE_TRANSFER_CONFIG.MAX_FILE_SIZE) {
     const sizeMB = (file.size / (1024 * 1024)).toFixed(1)
-    const limitMB = (MAX_IMAGE_SIZE / (1024 * 1024)).toFixed(0)
+    const limitMB = (FILE_TRANSFER_CONFIG.MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)
     return {
       valid: false,
-      error: `Image is too large (${sizeMB} MB). Maximum allowed size is ${limitMB} MB.`,
+      error: `File is too large (${sizeMB} MB). Maximum allowed size is ${limitMB} MB.`,
     }
   }
+
   if (file.size === 0) {
-    return { valid: false, error: 'Image file is empty.' }
+    return { valid: false, error: 'File is empty.' }
   }
+
   return { valid: true }
 }
 
@@ -69,9 +90,9 @@ export interface SendFileOptions {
  * Send a file over a DataChannel using chunked transfer with backpressure.
  *
  * Protocol:
- *   1. JSON metadata message (image-start)
- *   2. For each chunk: JSON header (image-chunk) + binary ArrayBuffer
- *   3. JSON completion message (image-complete)
+ *   1. JSON metadata message (file-start)
+ *   2. For each chunk: JSON header (file-chunk) + binary ArrayBuffer
+ *   3. JSON completion message (file-complete)
  */
 export async function sendFile({
   channel,
@@ -81,29 +102,28 @@ export async function sendFile({
   onProgress,
   abortSignal,
 }: SendFileOptions): Promise<void> {
-  const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
+  const totalChunks = Math.ceil(file.size / FILE_TRANSFER_CONFIG.CHUNK_SIZE)
 
   // 1. Send metadata
-  const metadata: ImageTransferMetadata = {
-    type: 'image-start',
+  const metadata: FileTransferMetadata = {
+    type: 'file-start',
     transferId,
-    fileName: file.name || 'image',
+    fileName: file.name || 'file',
     mimeType: file.type,
     size: file.size,
     totalChunks,
     senderName,
+    category: getFileCategory(file.type),
   }
   sendControlMessage(channel, metadata)
 
-  // 2. Send chunks with backpressure
-  const arrayBuffer = await file.arrayBuffer()
   let offset = 0
   let chunkIndex = 0
 
   while (offset < file.size) {
     // Check for cancellation
     if (abortSignal?.aborted) {
-      const cancel: ImageTransferCancel = { type: 'image-cancel', transferId }
+      const cancel: FileTransferCancel = { type: 'file-cancel', transferId }
       sendControlMessage(channel, cancel)
       throw new DOMException('Transfer cancelled', 'AbortError')
     }
@@ -114,16 +134,19 @@ export async function sendFile({
     }
 
     // Backpressure: wait if buffer is too full
+    // 2MB backpressure threshold limit
+    const MAX_BUFFERED_AMOUNT = 2 * 1024 * 1024
     if (channel.bufferedAmount > MAX_BUFFERED_AMOUNT) {
-      await waitForBufferDrain(channel)
+      await waitForBufferDrain(channel, MAX_BUFFERED_AMOUNT)
     }
 
-    const end = Math.min(offset + CHUNK_SIZE, file.size)
-    const chunkData = arrayBuffer.slice(offset, end)
+    const end = Math.min(offset + FILE_TRANSFER_CONFIG.CHUNK_SIZE, file.size)
+    const chunkBlob = file.slice(offset, end)
+    const chunkData = await chunkBlob.arrayBuffer()
 
     // Send chunk header (JSON)
-    const chunkHeader: ImageChunkHeader = {
-      type: 'image-chunk',
+    const chunkHeader: FileChunkHeader = {
+      type: 'file-chunk',
       transferId,
       index: chunkIndex,
     }
@@ -138,7 +161,7 @@ export async function sendFile({
   }
 
   // 3. Send completion
-  const complete: ImageTransferComplete = { type: 'image-complete', transferId }
+  const complete: FileTransferComplete = { type: 'file-complete', transferId }
   sendControlMessage(channel, complete)
 }
 
@@ -146,9 +169,9 @@ export async function sendFile({
  * Returns a promise that resolves when the DataChannel's bufferedAmount
  * drops below the threshold, using the `bufferedamountlow` event.
  */
-function waitForBufferDrain(channel: RTCDataChannel): Promise<void> {
+function waitForBufferDrain(channel: RTCDataChannel, maxBufferedAmount: number): Promise<void> {
   return new Promise<void>((resolve) => {
-    channel.bufferedAmountLowThreshold = MAX_BUFFERED_AMOUNT / 2
+    channel.bufferedAmountLowThreshold = maxBufferedAmount / 2
     const handler = () => {
       channel.removeEventListener('bufferedamountlow', handler)
       resolve()
@@ -157,7 +180,7 @@ function waitForBufferDrain(channel: RTCDataChannel): Promise<void> {
 
     // Fallback: poll in case the event doesn't fire (some browser edge cases)
     const fallback = setInterval(() => {
-      if (channel.bufferedAmount <= MAX_BUFFERED_AMOUNT / 2) {
+      if (channel.bufferedAmount <= maxBufferedAmount / 2) {
         clearInterval(fallback)
         channel.removeEventListener('bufferedamountlow', handler)
         resolve()
@@ -173,7 +196,7 @@ function waitForBufferDrain(channel: RTCDataChannel): Promise<void> {
 // ─── Receiving ──────────────────────────────────────────────────────────────
 
 export interface IncomingTransfer {
-  metadata: ImageTransferMetadata
+  metadata: FileTransferMetadata
   chunks: ArrayBuffer[]
   receivedChunks: number
   bytesReceived: number
@@ -182,15 +205,15 @@ export interface IncomingTransfer {
 }
 
 export interface FileReceiverCallbacks {
-  onTransferStart: (metadata: ImageTransferMetadata) => void
+  onTransferStart: (metadata: FileTransferMetadata) => void
   onProgress: (transferId: string, bytesReceived: number, totalBytes: number) => void
-  onComplete: (transferId: string, blob: Blob, metadata: ImageTransferMetadata) => void
+  onComplete: (transferId: string, blob: Blob, metadata: FileTransferMetadata) => void
   onError: (transferId: string, error: string) => void
   onCancelled: (transferId: string) => void
 }
 
 /**
- * Stateful receiver that collects incoming chunks and reconstructs images.
+ * Stateful receiver that collects incoming chunks and reconstructs files.
  * Create one instance per peer DataChannel.
  */
 export class FileReceiver {
@@ -208,17 +231,17 @@ export class FileReceiver {
    */
   handleControlMessage(message: DataChannelMessage): void {
     switch (message.type) {
-      case 'image-start':
-        this.handleStart(message as unknown as ImageTransferMetadata)
+      case 'file-start':
+        this.handleStart(message as unknown as FileTransferMetadata)
         break
-      case 'image-chunk':
-        this.handleChunkHeader(message as unknown as ImageChunkHeader)
+      case 'file-chunk':
+        this.handleChunkHeader(message as unknown as FileChunkHeader)
         break
-      case 'image-complete':
-        this.handleComplete(message as unknown as ImageTransferComplete)
+      case 'file-complete':
+        this.handleComplete(message as unknown as FileTransferComplete)
         break
-      case 'image-cancel':
-        this.handleCancel(message as unknown as ImageTransferCancel)
+      case 'file-cancel':
+        this.handleCancel(message as unknown as FileTransferCancel)
         break
     }
   }
@@ -262,7 +285,7 @@ export class FileReceiver {
     this.pendingBinaryFor = null
   }
 
-  private handleStart(metadata: ImageTransferMetadata): void {
+  private handleStart(metadata: FileTransferMetadata): void {
     // Guard against duplicate transfer IDs
     if (this.transfers.has(metadata.transferId)) {
       console.warn(`[FileReceiver] Duplicate transferId: ${metadata.transferId}`)
@@ -280,7 +303,7 @@ export class FileReceiver {
     this.callbacks.onTransferStart(metadata)
   }
 
-  private handleChunkHeader(header: ImageChunkHeader): void {
+  private handleChunkHeader(header: FileChunkHeader): void {
     const transfer = this.transfers.get(header.transferId)
     if (!transfer) {
       console.warn(`[FileReceiver] Chunk for unknown transfer: ${header.transferId}`)
@@ -291,17 +314,25 @@ export class FileReceiver {
     transfer.nextExpectedIndex = header.index + 1
   }
 
-  private handleComplete(msg: ImageTransferComplete): void {
+  private handleComplete(msg: FileTransferComplete): void {
     const transfer = this.transfers.get(msg.transferId)
     if (!transfer) return
 
-    const blob = new Blob(transfer.chunks, { type: transfer.metadata.mimeType })
-    this.transfers.delete(msg.transferId)
+    try {
+      const blob = new Blob(transfer.chunks, { type: transfer.metadata.mimeType })
+      // Clear chunks from memory quickly after blob creation
+      transfer.chunks = []
+      this.transfers.delete(msg.transferId)
 
-    this.callbacks.onComplete(msg.transferId, blob, transfer.metadata)
+      this.callbacks.onComplete(msg.transferId, blob, transfer.metadata)
+    } catch (err) {
+      console.error('[FileReceiver] Error creating blob:', err)
+      this.callbacks.onError(msg.transferId, 'Failed to assemble file - it may be too large for browser memory')
+      this.transfers.delete(msg.transferId)
+    }
   }
 
-  private handleCancel(msg: ImageTransferCancel): void {
+  private handleCancel(msg: FileTransferCancel): void {
     if (this.transfers.has(msg.transferId)) {
       this.transfers.delete(msg.transferId)
       this.callbacks.onCancelled(msg.transferId)

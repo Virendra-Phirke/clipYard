@@ -1,23 +1,16 @@
-/**
- * components/image-sharing/ImageSharePanel.tsx
- *
- * Main container for P2P image sharing within a ClipYard room.
- * Renders the uploader, preview, active transfers, received images,
- * and WebRTC connection status.
- */
-
 'use client'
 
 import { useCallback, useState, type CSSProperties } from 'react'
-import { useImageTransfer } from '@/hooks/useImageTransfer'
-import ImageUploader from './ImageUploader'
-import ImagePreview from './ImagePreview'
-import ImageTransferCard from './ImageTransferCard'
-import ReceivedImageCard from './ReceivedImageCard'
-import ImageModal from './ImageModal'
+import { useFileTransfer } from '../hooks/useFileTransfer'
+import { FileUploader } from './FileUploader'
+import { FilePreview } from './FilePreview'
+import { FileTransferCard } from './FileTransferCard'
+import { ReceivedFileCard } from './ReceivedFileCard'
+import { FileModal } from './FileModal'
 import type { Transfer } from '@/lib/webrtc/types'
+import { FILE_TRANSFER_CONFIG } from '@/lib/webrtc/config'
 
-interface ImageSharePanelProps {
+interface FileSharePanelProps {
   roomId: string
   localUid: string
   localName: string
@@ -80,6 +73,18 @@ const S: Record<string, CSSProperties> = {
     border: '1.5px solid var(--cy-border)',
     borderRadius: '4px',
   },
+  testingBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px',
+    backgroundColor: 'rgba(255, 149, 0, 0.1)',
+    border: '1.5px solid var(--cy-warning)',
+    borderRadius: '4px',
+    color: 'var(--cy-text)',
+    fontFamily: 'JetBrains Mono, monospace',
+    fontSize: '12px',
+  },
   transfersSection: {
     display: 'flex',
     flexDirection: 'column',
@@ -109,23 +114,28 @@ const S: Record<string, CSSProperties> = {
     border: '1.5px solid var(--cy-error)',
     borderRadius: '4px',
   },
+  previewGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gap: '12px',
+  },
 }
 
-export default function ImageSharePanel({
+export const FileSharePanel = ({
   roomId,
   localUid,
   localName,
   presence,
-}: ImageSharePanelProps) {
+}: FileSharePanelProps) => {
   const {
     transfers,
     peers,
     isSupported,
-    sendImage,
+    sendFile,
     cancelTransfer,
-    downloadImage,
+    downloadFile,
     connectedPeerCount,
-  } = useImageTransfer({
+  } = useFileTransfer({
     roomId,
     localUid,
     localName,
@@ -133,37 +143,17 @@ export default function ImageSharePanel({
     enabled: true,
   })
 
-  const [pendingFile, setPendingFile] = useState<File | null>(null)
-  const [sending, setSending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [viewingImage, setViewingImage] = useState<Transfer | null>(null)
+  // We could stage multiple files, but for simplicity of the prompt,
+  // queueFile directly handles it in useFileTransfer. However, the user might want to 
+  // review them first like before. But in FileUploader we added multiple. Let's send directly on drop for testing ease, or hold in state?
+  // Let's hold in state if they want. Or just send immediately for better UX. Let's send immediately.
+  const handleFileSelected = useCallback((file: File) => {
+    sendFile(file)
+  }, [sendFile])
 
-  const handleImageSelected = useCallback((file: File) => {
-    setError(null)
-    setPendingFile(file)
-  }, [])
-
-  const handleSend = useCallback(async (targetPeerId?: string) => {
-    if (!pendingFile) return
-    setSending(true)
-    setError(null)
-    try {
-      await sendImage(pendingFile, targetPeerId)
-      setPendingFile(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send image')
-    } finally {
-      setSending(false)
-    }
-  }, [pendingFile, sendImage])
-
-  const handleRemove = useCallback(() => {
-    setPendingFile(null)
-    setError(null)
-  }, [])
+  const [viewingFile, setViewingFile] = useState<Transfer | null>(null)
 
   const handleCancelBatch = useCallback((batchId: string) => {
-    // Find all transfers in this batch and cancel them
     transfers.filter((t) => t.batchId === batchId || t.id === batchId).forEach((t) => {
       cancelTransfer(t.id)
     })
@@ -208,11 +198,17 @@ export default function ImageSharePanel({
       // Calculate aggregate progress
       const totalProgress = group.reduce((sum, t) => sum + t.progress, 0)
       const avgProgress = Math.round(totalProgress / group.length)
-      // Return a merged representation
+      
+      // Calculate max eta and sum speed
+      const totalSpeed = group.reduce((sum, t) => sum + (t.speed || 0), 0)
+      const maxEta = Math.max(...group.map(t => t.eta || 0), 0)
+
       return {
         ...group[0],
-        id: group[0].batchId || group[0].id, // use batchId as key for rendering and cancelling
+        id: group[0].batchId || group[0].id, 
         progress: avgProgress,
+        speed: totalSpeed > 0 ? totalSpeed : undefined,
+        eta: maxEta > 0 ? maxEta : undefined,
         peerName: `Everyone (${group.length})`,
       }
     })
@@ -236,14 +232,12 @@ export default function ImageSharePanel({
       <div style={S.section}>
         <div style={S.title}>
           <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--cy-text-secondary)' }}>
-            image
+            folder_zip
           </span>
-          Image Sharing
+          File Sharing
         </div>
         <div style={S.unsupported}>
-          Your browser does not support peer-to-peer image sharing.
-          <br />
-          Please use a modern version of Chrome, Edge, Firefox, or Safari.
+          Your browser does not support peer-to-peer file sharing.
         </div>
       </div>
     )
@@ -255,9 +249,9 @@ export default function ImageSharePanel({
       <div style={S.sectionHeader}>
         <div style={S.title}>
           <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--cy-text-secondary)' }}>
-            image
+            folder_zip
           </span>
-          Image Sharing
+          File Sharing
         </div>
         <div style={S.statusBadge}>
           <div style={{ ...S.dot, backgroundColor: statusColor }} />
@@ -265,34 +259,28 @@ export default function ImageSharePanel({
         </div>
       </div>
 
-      {/* Uploader (hidden when a file is already staged) */}
-      {!pendingFile && (
-        <ImageUploader
-          onImageSelected={handleImageSelected}
-          disabled={sending}
-        />
+      {FILE_TRANSFER_CONFIG.TESTING_MODE && (
+        <div style={S.testingBanner}>
+          <span className="material-symbols-outlined" style={{ color: 'var(--cy-warning)', fontSize: '20px' }}>
+            experiment
+          </span>
+          <div>
+            <strong>Temporary Testing Mode:</strong> Generic file transfers up to {(FILE_TRANSFER_CONFIG.MAX_FILE_SIZE / (1024 * 1024)).toFixed(0)}MB are enabled.
+          </div>
+        </div>
       )}
 
-      {/* Error */}
-      {error && <div style={S.error}>{error}</div>}
-
-      {/* Pending preview */}
-      {pendingFile && (
-        <ImagePreview
-          file={pendingFile}
-          peers={peers}
-          onSend={handleSend}
-          onRemove={handleRemove}
-          sending={sending}
-        />
-      )}
+      {/* Uploader */}
+      <FileUploader
+        onFileSelected={handleFileSelected}
+      />
 
       {/* Active transfers */}
       {aggregatedActiveTransfers.length > 0 && (
         <div style={S.transfersSection}>
           <div style={S.subTitle}>Active Transfers</div>
           {aggregatedActiveTransfers.map((t) => (
-            <ImageTransferCard
+            <FileTransferCard
               key={t.id}
               transfer={t}
               onCancel={t.direction === 'sent' ? handleCancelBatch : cancelTransfer}
@@ -305,7 +293,7 @@ export default function ImageSharePanel({
       {failedTransfers.length > 0 && (
         <div style={S.transfersSection}>
           {failedTransfers.map((t) => (
-            <ImageTransferCard
+            <FileTransferCard
               key={t.id}
               transfer={t}
             />
@@ -313,17 +301,17 @@ export default function ImageSharePanel({
         </div>
       )}
 
-      {/* Received images */}
+      {/* Received files */}
       {completedReceived.length > 0 && (
         <div style={S.transfersSection}>
-          <div style={S.subTitle}>Received Images</div>
+          <div style={S.subTitle}>Received Files</div>
           <div style={S.receivedGrid}>
             {completedReceived.map((t) => (
-              <ReceivedImageCard
+              <ReceivedFileCard
                 key={t.id}
                 transfer={t}
-                onDownload={downloadImage}
-                onView={setViewingImage}
+                onDownload={downloadFile}
+                onView={setViewingFile}
               />
             ))}
           </div>
@@ -334,17 +322,18 @@ export default function ImageSharePanel({
       {uniqueCompletedSentBatches.size > 0 && (
         <div style={S.transfersSection}>
           <div style={S.subTitle}>
-            {uniqueCompletedSentBatches.size} image{uniqueCompletedSentBatches.size !== 1 ? 's' : ''} sent
+            {uniqueCompletedSentBatches.size} file{uniqueCompletedSentBatches.size !== 1 ? 's' : ''} sent
           </div>
         </div>
       )}
 
       {/* Full screen modal */}
-      {viewingImage && viewingImage.objectUrl && (
-        <ImageModal
-          url={viewingImage.objectUrl}
-          fileName={viewingImage.fileName}
-          onClose={() => setViewingImage(null)}
+      {viewingFile && viewingFile.objectUrl && (
+        <FileModal
+          url={viewingFile.objectUrl}
+          fileName={viewingFile.fileName}
+          mimeType={viewingFile.mimeType}
+          onClose={() => setViewingFile(null)}
         />
       )}
     </div>

@@ -21,7 +21,6 @@ import {
   listenForAnswer,
   listenForCandidates,
   cleanupSignaling,
-  cleanupPeerSignaling,
 } from '@/lib/webrtc/signaling'
 import type { PeerStatus, PeerConnectionInfo, SignalingOffer } from '@/lib/webrtc/types'
 import type { Unsubscribe } from 'firebase/database'
@@ -292,11 +291,8 @@ export function useWebRTC({
     try { state.connection.close() } catch { /* ignore */ }
     peerStatesRef.current.delete(peerId)
     processedPeersRef.current.delete(peerId)
-    if (roomId && localUid) {
-      cleanupPeerSignaling(roomId, localUid, peerId).catch(() => undefined)
-    }
     syncPeerList()
-  }, [roomId, localUid, syncPeerList])
+  }, [syncPeerList])
 
   // Main effect: watch presence and set up WebRTC connections
   useEffect(() => {

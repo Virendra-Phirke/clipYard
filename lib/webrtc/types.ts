@@ -1,32 +1,9 @@
 /**
  * lib/webrtc/types.ts
  *
- * Shared TypeScript types and constants for the WebRTC image-transfer system.
+ * Shared TypeScript types and constants for the WebRTC file-transfer system.
  * Consumed by the core library, hooks, and UI components.
  */
-
-// ─── Image validation constants ─────────────────────────────────────────────
-
-export const ALLOWED_IMAGE_TYPES = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-  'image/gif',
-  'image/bmp',
-  'image/svg+xml',
-])
-
-/** Maximum image size in bytes (10 MB). */
-export const MAX_IMAGE_SIZE = 10 * 1024 * 1024
-
-/** Chunk size for DataChannel binary transfer (16 KB). */
-export const CHUNK_SIZE = 16 * 1024
-
-/**
- * Backpressure threshold in bytes. Pause sending when
- * `channel.bufferedAmount` exceeds this value.
- */
-export const MAX_BUFFERED_AMOUNT = 1 * 1024 * 1024
 
 // ─── Peer connection status ─────────────────────────────────────────────────
 
@@ -34,38 +11,39 @@ export type PeerStatus = 'connecting' | 'connected' | 'disconnected' | 'failed'
 
 // ─── Transfer protocol messages (sent as JSON over DataChannel) ─────────────
 
-export interface ImageTransferMetadata {
-  type: 'image-start'
+export interface FileTransferMetadata {
+  type: 'file-start'
   transferId: string
   fileName: string
   mimeType: string
   size: number
   totalChunks: number
   senderName: string
+  category: 'image' | 'video' | 'document' | 'file'
 }
 
-export interface ImageChunkHeader {
-  type: 'image-chunk'
+export interface FileChunkHeader {
+  type: 'file-chunk'
   transferId: string
   index: number
 }
 
-export interface ImageTransferComplete {
-  type: 'image-complete'
+export interface FileTransferComplete {
+  type: 'file-complete'
   transferId: string
 }
 
-export interface ImageTransferCancel {
-  type: 'image-cancel'
+export interface FileTransferCancel {
+  type: 'file-cancel'
   transferId: string
 }
 
 /** Discriminated union of all JSON control messages flowing through the DataChannel. */
 export type DataChannelMessage =
-  | ImageTransferMetadata
-  | ImageChunkHeader
-  | ImageTransferComplete
-  | ImageTransferCancel
+  | FileTransferMetadata
+  | FileChunkHeader
+  | FileTransferComplete
+  | FileTransferCancel
 
 // ─── Local transfer state ───────────────────────────────────────────────────
 
@@ -78,17 +56,21 @@ export interface Transfer {
   fileName: string
   fileSize: number
   mimeType: string
+  category: 'image' | 'video' | 'document' | 'file'
   direction: TransferDirection
   peerId: string
   peerName: string
   status: TransferStatus
   progress: number
-  /** Object URL for completed received images. */
+  /** Object URL for completed received files (e.g. image/video preview). */
   objectUrl?: string
-  /** Blob for completed received images (used for download). */
+  /** Blob for completed received files (used for download). */
   blob?: Blob
   createdAt: number
   error?: string
+  /** Optional metrics */
+  speed?: number // bytes per second
+  eta?: number // seconds remaining
 }
 
 // ─── WebRTC signaling messages (stored in Firebase) ─────────────────────────

@@ -40,6 +40,11 @@ export async function sendOffer(
   sdp: string,
 ): Promise<void> {
   const { database } = getFirebaseServices()
+  
+  // Wipe the entire outbox for this specific peer to ensure no stale candidates or offers
+  const outboxRef = ref(database, signalingPath(roomId, fromUid, toUid))
+  await remove(outboxRef).catch(() => undefined)
+
   const offerRef = ref(database, `${signalingPath(roomId, fromUid, toUid)}/offer`)
   await set(offerRef, { type: 'offer', sdp } satisfies SignalingOffer)
 }
@@ -51,6 +56,11 @@ export async function sendAnswer(
   sdp: string,
 ): Promise<void> {
   const { database } = getFirebaseServices()
+
+  // Wipe the entire outbox for this specific peer to ensure no stale candidates or answers
+  const outboxRef = ref(database, signalingPath(roomId, fromUid, toUid))
+  await remove(outboxRef).catch(() => undefined)
+
   const answerRef = ref(database, `${signalingPath(roomId, fromUid, toUid)}/answer`)
   await set(answerRef, { type: 'answer', sdp } satisfies SignalingAnswer)
 }
