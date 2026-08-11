@@ -10,7 +10,7 @@
 
 import type { DataChannelMessage } from './types'
 
-const CHANNEL_LABEL = 'image-transfer'
+const CHANNEL_LABEL = 'file-transfer'
 
 /**
  * Create a DataChannel on the given peer connection for image transfer.
@@ -58,7 +58,7 @@ export function parseIncomingMessage(
     } catch {
       // Malformed JSON — treat as unknown, log and ignore
       console.warn('[WebRTC] Received unparseable string message')
-      return { kind: 'control', message: { type: 'image-cancel', transferId: '' } }
+      return { kind: 'control', message: { type: 'file-cancel', transferId: '' } }
     }
   }
   return { kind: 'binary', data }

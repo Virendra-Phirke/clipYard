@@ -33,6 +33,12 @@ function signalingPath(roomId: string, fromUid: string, toUid: string) {
 
 // ─── Write operations ───────────────────────────────────────────────────────
 
+export async function clearSignalingOutbox(roomId: string, fromUid: string, toUid: string): Promise<void> {
+  const { database } = getFirebaseServices()
+  const outboxRef = ref(database, signalingPath(roomId, fromUid, toUid))
+  await remove(outboxRef).catch(() => undefined)
+}
+
 export async function sendOffer(
   roomId: string,
   fromUid: string,
@@ -40,6 +46,8 @@ export async function sendOffer(
   sdp: string,
 ): Promise<void> {
   const { database } = getFirebaseServices()
+
+
   const offerRef = ref(database, `${signalingPath(roomId, fromUid, toUid)}/offer`)
   await set(offerRef, { type: 'offer', sdp } satisfies SignalingOffer)
 }
@@ -51,6 +59,7 @@ export async function sendAnswer(
   sdp: string,
 ): Promise<void> {
   const { database } = getFirebaseServices()
+
   const answerRef = ref(database, `${signalingPath(roomId, fromUid, toUid)}/answer`)
   await set(answerRef, { type: 'answer', sdp } satisfies SignalingAnswer)
 }

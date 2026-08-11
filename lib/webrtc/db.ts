@@ -5,10 +5,10 @@
  */
 
 const DB_NAME = 'ClipYardDB'
-const DB_VERSION = 1
-const STORE_NAME = 'images'
+const DB_VERSION = 2
+const STORE_NAME = 'files'
 
-export interface StoredImage {
+export interface StoredFile {
   id: string
   roomId: string
   fileName: string
@@ -18,6 +18,7 @@ export interface StoredImage {
   createdAt: number
   peerId: string
   peerName: string
+  category?: 'image' | 'video' | 'document' | 'file'
 }
 
 function getDB(): Promise<IDBDatabase> {
@@ -38,19 +39,19 @@ function getDB(): Promise<IDBDatabase> {
   })
 }
 
-export async function saveImageToDB(image: StoredImage): Promise<void> {
+export async function saveFileToDB(file: StoredFile): Promise<void> {
   const db = await getDB()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], 'readwrite')
     const store = transaction.objectStore(STORE_NAME)
-    const request = store.put(image)
+    const request = store.put(file)
 
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error)
   })
 }
 
-export async function getImagesByRoom(roomId: string): Promise<StoredImage[]> {
+export async function getFilesByRoom(roomId: string): Promise<StoredFile[]> {
   const db = await getDB()
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], 'readonly')
@@ -60,7 +61,7 @@ export async function getImagesByRoom(roomId: string): Promise<StoredImage[]> {
 
     request.onsuccess = () => {
       // Sort descending by createdAt so newest are first
-      const results = (request.result as StoredImage[]).sort(
+      const results = (request.result as StoredFile[]).sort(
         (a, b) => b.createdAt - a.createdAt
       )
       resolve(results)

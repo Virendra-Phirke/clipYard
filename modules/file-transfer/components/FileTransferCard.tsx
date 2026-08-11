@@ -1,17 +1,10 @@
-/**
- * components/image-sharing/ImageTransferCard.tsx
- *
- * Card for an active (in-progress or failed) transfer.
- * Wraps TransferProgress with file info and error display.
- */
-
 'use client'
 
 import { useState, type CSSProperties } from 'react'
 import type { Transfer } from '@/lib/webrtc/types'
-import TransferProgress from './TransferProgress'
+import { TransferProgress } from './TransferProgress'
 
-interface ImageTransferCardProps {
+interface FileTransferCardProps {
   transfer: Transfer
   onCancel?: (transferId: string) => void
   onRetry?: (transfer: Transfer) => void
@@ -21,6 +14,15 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function getIconForCategory(category: string): string {
+  switch (category) {
+    case 'image': return 'image'
+    case 'video': return 'movie'
+    case 'document': return 'description'
+    default: return 'insert_drive_file'
+  }
 }
 
 const S: Record<string, CSSProperties> = {
@@ -93,11 +95,11 @@ const S: Record<string, CSSProperties> = {
   },
 }
 
-export default function ImageTransferCard({
+export const FileTransferCard = ({
   transfer,
   onCancel,
   onRetry,
-}: ImageTransferCardProps) {
+}: FileTransferCardProps) => {
   const [isHovered, setIsHovered] = useState(false)
 
   const directionLabel = transfer.direction === 'sent'
@@ -116,7 +118,7 @@ export default function ImageTransferCard({
     >
       <div style={S.header}>
         <span className="material-symbols-outlined" style={S.icon}>
-          {transfer.direction === 'sent' ? 'upload' : 'download'}
+          {getIconForCategory(transfer.category)}
         </span>
         <div style={S.info}>
           <div style={S.fileName} title={transfer.fileName}>
@@ -133,6 +135,8 @@ export default function ImageTransferCard({
           progress={transfer.progress}
           totalBytes={transfer.fileSize}
           direction={transfer.direction}
+          speed={transfer.speed}
+          eta={transfer.eta}
           onCancel={
             transfer.direction === 'sent' && onCancel
               ? () => onCancel(transfer.id)

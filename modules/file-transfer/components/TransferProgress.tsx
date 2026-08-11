@@ -1,10 +1,3 @@
-/**
- * components/image-sharing/TransferProgress.tsx
- *
- * Animated progress bar for image transfers.
- * Matches ClipYard's design: JetBrains Mono, --cy-* variables, 1.5px borders.
- */
-
 'use client'
 
 import type { CSSProperties } from 'react'
@@ -14,6 +7,8 @@ interface TransferProgressProps {
   bytesSent?: number
   totalBytes: number
   direction: 'sent' | 'received'
+  speed?: number
+  eta?: number
   onCancel?: () => void
 }
 
@@ -21,6 +16,17 @@ function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function formatSpeed(bytesPerSec?: number): string {
+  if (!bytesPerSec) return ''
+  return `${formatBytes(bytesPerSec)}/s`
+}
+
+function formatETA(seconds?: number): string {
+  if (seconds === undefined || seconds < 0) return ''
+  if (seconds < 60) return `${Math.ceil(seconds)}s left`
+  return `${Math.ceil(seconds / 60)}m left`
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -39,6 +45,13 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
     letterSpacing: '0.02em',
+  },
+  metrics: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '11px',
+    color: 'var(--cy-text-muted)',
   },
   barTrack: {
     width: '100%',
@@ -62,17 +75,19 @@ const styles: Record<string, CSSProperties> = {
     color: 'var(--cy-error)',
     cursor: 'pointer',
     letterSpacing: '0.02em',
-    textTransform: 'uppercase' as const,
+    textTransform: 'uppercase',
   },
 }
 
-export default function TransferProgress({
+export const TransferProgress = ({
   progress,
   bytesSent,
   totalBytes,
   direction,
+  speed,
+  eta,
   onCancel,
-}: TransferProgressProps) {
+}: TransferProgressProps) => {
   const clampedProgress = Math.min(100, Math.max(0, progress))
   const sent = bytesSent ?? Math.round((totalBytes * clampedProgress) / 100)
 
@@ -97,6 +112,13 @@ export default function TransferProgress({
           )}
         </span>
       </div>
+      {(speed !== undefined || eta !== undefined) && (
+        <div style={styles.metrics}>
+          {speed !== undefined && <span>{formatSpeed(speed)}</span>}
+          {speed !== undefined && eta !== undefined && <span>·</span>}
+          {eta !== undefined && <span>{formatETA(eta)}</span>}
+        </div>
+      )}
       <div style={styles.barTrack}>
         <div
           style={{
