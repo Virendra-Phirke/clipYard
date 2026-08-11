@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useWebRTC, type UseWebRTCReturn } from './useWebRTC'
 import { sendFile, validateImage, generateTransferId, FileReceiver } from '@/lib/webrtc/fileTransfer'
 import { parseIncomingMessage } from '@/lib/webrtc/dataChannel'
+import { getImagesByRoom, saveImageToDB } from '@/lib/webrtc/db'
 import type {
   Transfer,
   TransferStatus,
@@ -54,6 +55,39 @@ export function useImageTransfer({
   const abortControllersRef = useRef(new Map<string, AbortController>())
   const fileReceiversRef = useRef(new Map<string, FileReceiver>())
   const objectUrlsRef = useRef(new Set<string>())
+  const [hasLoadedDB, setHasLoadedDB] = useState(false)
+
+  // Load persisted images from IndexedDB on mount
+  useEffect(() => {
+    if (!roomId || hasLoadedDB) return
+
+    getImagesByRoom(roomId).then((storedImages) => {
+      const restoredTransfers: Transfer[] = storedImages.map((img) => {
+        const url = URL.createObjectURL(img.blob)
+        objectUrlsRef.current.add(url)
+
+        return {
+          id: img.id,
+          fileName: img.fileName,
+          fileSize: img.fileSize,
+          mimeType: img.mimeType,
+          direction: 'received',
+          peerId: img.peerId,
+          peerName: img.peerName,
+          status: 'completed',
+          progress: 100,
+          createdAt: img.createdAt,
+          objectUrl: url,
+          blob: img.blob,
+        }
+      })
+
+      if (restoredTransfers.length > 0) {
+        setTransfers((prev) => [...prev, ...restoredTransfers])
+      }
+      setHasLoadedDB(true)
+    }).catch(console.error)
+  }, [roomId, hasLoadedDB])
 
   // Handle incoming DataChannel messages
   const handleMessage = useCallback((peerId: string, event: MessageEvent) => {
@@ -116,6 +150,19 @@ export function useImageTransfer({
               objectUrl: url,
               blob,
             })
+
+            // Persist to IndexedDB
+            saveImageToDB({
+              id: metadata.transferId,
+              roomId,
+              fileName: metadata.fileName,
+              fileSize: metadata.size,
+              mimeType: metadata.mimeType,
+              blob,
+              createdAt: Date.now(),
+              peerId: peer.peerId,
+              peerName: metadata.senderName || peer.peerName,
+            }).catch(console.error)
           },
           onError: (transferId: string, error: string) => {
             updateTransfer(transferId, { status: 'failed', error })
