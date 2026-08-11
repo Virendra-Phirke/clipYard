@@ -21,8 +21,8 @@ export async function POST(request: Request) {
 
     const presence = presenceSnapshot.val() || {}
     const activeUsersCount = Object.keys(presence).length
-    if (activeUsersCount >= 10) {
-      return NextResponse.json({ error: 'Room is full (max 10 users)' }, { status: 403 })
+    if (activeUsersCount >= 5) {
+      return NextResponse.json({ error: 'Room is full (max 5 users)' }, { status: 403 })
     }
     const participantUid = crypto.randomUUID()
 
