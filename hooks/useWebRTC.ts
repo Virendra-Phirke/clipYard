@@ -21,6 +21,7 @@ import {
   listenForAnswer,
   listenForCandidates,
   cleanupSignaling,
+  clearSignalingOutbox,
 } from '@/lib/webrtc/signaling'
 import type { PeerStatus, PeerConnectionInfo, SignalingOffer } from '@/lib/webrtc/types'
 import type { Unsubscribe } from 'firebase/database'
@@ -212,6 +213,7 @@ export function useWebRTC({
 
     // Create and send offer
     try {
+      await clearSignalingOutbox(roomId, localUid, peerId).catch(() => undefined)
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
       if (offer.sdp) {
@@ -270,6 +272,7 @@ export function useWebRTC({
 
     // Set remote offer and create answer
     try {
+      await clearSignalingOutbox(roomId, localUid, peerId).catch(() => undefined)
       await pc.setRemoteDescription(new RTCSessionDescription(offer))
       const answer = await pc.createAnswer()
       await pc.setLocalDescription(answer)
