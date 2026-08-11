@@ -198,7 +198,7 @@ const S = {
   },
   clearBtn: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: 'var(--cy-surface-container)',
     color: 'var(--cy-secondary-text)',
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '14px',
@@ -825,8 +825,8 @@ export default function RoomPage() {
               id="clear-btn"
               onClick={() => handleTextChange('')}
               style={S.clearBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container-high)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
             >
               CLEAR
             </button>
