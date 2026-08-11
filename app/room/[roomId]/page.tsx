@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import ImageSharePanel from '@/components/image-sharing/ImageSharePanel'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { QRCodeSVG } from 'qrcode.react'
@@ -36,6 +37,9 @@ import {
 } from '@/services/room'
 import { getLocalFingerprint } from '@/services/fingerprint'
 import { PRESENCE_LIFESPAN_MS } from '@/lib/presence'
+import { getFirebaseServices } from '@/lib/firebase-client'
+import { cleanupSignaling } from '@/lib/webrtc/signaling'
+
 
 /* ─────────────────────────────── styles ─────────────────────────────── */
 
@@ -352,11 +356,21 @@ export default function RoomPage() {
   const dirtyRef = useRef(false)
   const textRef = useRef('')
   const lastKnownUpdatedAtRef = useRef<number | undefined>(undefined)
+  
+  const instanceId = useMemo(() => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID()
+    }
+    return Math.random().toString(36).substring(2, 15)
+  }, [])
+
   const saveTimerRef = useRef<number | null>(null)
   const heartbeatTimerRef = useRef<number | null>(null)
   const lifespanTimerRef = useRef<number | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const latestPresenceRef = useRef<Record<string, any>>({})
+  const firebaseUidRef = useRef('')
+  const [presenceMap, setPresenceMap] = useState<Record<string, { name?: string; sid?: string; [key: string]: unknown }>>({})
 
   const [serverDevices, setServerDevices] = useState<Device[]>([])
 
@@ -447,6 +461,12 @@ export default function RoomPage() {
           role: entry.role || 'participant',
         })),
       )
+      // Update presence map for WebRTC (keyed by uid)
+      const pMap: Record<string, { name?: string; sid?: string; [key: string]: unknown }> = {}
+      for (const [sid, entry] of activeEntries) {
+        pMap[sid] = { ...(entry as Record<string, unknown>), sid }
+      }
+      setPresenceMap(pMap)
       setConnection('connected')
     }
 
@@ -484,6 +504,10 @@ export default function RoomPage() {
           await signInToFirebaseRoom(payload.firebaseToken)
         }
 
+        // Capture Firebase auth UID for WebRTC signaling
+        const { auth: fbAuth } = getFirebaseServices()
+        firebaseUidRef.current = fbAuth.currentUser?.uid || ''
+
         let effectiveRole = payload.role
         if (effectiveRole === 'host') {
           setStoredHostFingerprint(roomId, fingerprintRef.current)
@@ -500,7 +524,7 @@ export default function RoomPage() {
                 tokenRef.current = body.token
                 try {
                   sessionStorage.setItem(`clipboard-token-${roomId}`, JSON.stringify(payload))
-                } catch {}
+                } catch { }
                 setStoredHostFingerprint(roomId, fingerprintRef.current)
                 effectiveRole = 'host'
               }
@@ -511,7 +535,7 @@ export default function RoomPage() {
         }
         setRole(effectiveRole)
         setConnection('connected')
-        await sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '')
+        await sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '', instanceId)
         await loadSnapshot()
 
         const handleUnload = () => sendLeaveBeacon(roomId, tokenRef.current, fingerprintRef.current)
@@ -533,6 +557,10 @@ export default function RoomPage() {
           cleanupPresenceOnDisconnect()
           handleUnload()
           if (lifespanTimerRef.current !== null) window.clearInterval(lifespanTimerRef.current)
+          // Clean up WebRTC signaling data
+          if (firebaseUidRef.current) {
+            cleanupSignaling(roomId, firebaseUidRef.current).catch(() => undefined)
+          }
         }
 
         setConnection('connected')
@@ -555,7 +583,7 @@ export default function RoomPage() {
         }, 1000)
 
         heartbeatTimerRef.current = window.setInterval(() => {
-          sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '')
+          sendPresence(roomId, payload.token, fingerprintRef.current, deviceLabelRef.current, userName ?? '', instanceId)
             .catch(() => setConnection('offline'))
         }, 5000)
       } catch (error) {
@@ -791,6 +819,16 @@ export default function RoomPage() {
               </button>
             )}
           </div>
+
+          {/* Image Sharing */}
+          {firebaseUidRef.current && (
+            <ImageSharePanel
+              roomId={roomId}
+              localUid={firebaseUidRef.current}
+              localName={userName ?? ''}
+              presence={presenceMap}
+            />
+          )}
         </div>
 
         {/* Sidebar — 4 cols on desktop, full on mobile */}
@@ -810,24 +848,24 @@ export default function RoomPage() {
               </li>
               {serverDevices.length > 0
                 ? serverDevices
-                    .filter((dev) => dev.fingerprint !== fingerprintRef.current)
-                    .map((dev, idx) => (
-                      <li key={dev.sid || idx} style={S.deviceItem}>
-                        <div style={S.deviceDot} />
-                        <span>
-                          {dev.name || `Participant ${idx + 2}`}
-                          {dev.deviceLabel ? <span style={{ color: 'var(--cy-text-muted)' }}> · {dev.deviceLabel}</span> : null}
-                          &nbsp;<span style={{ color: 'var(--cy-text-muted)' }}>({dev.role === 'host' ? 'HOST' : 'CONNECTED'})</span>
-                        </span>
-                      </li>
-                    ))
-                : otherDeviceNames.map((name) => (
-                    <li key={name} style={S.deviceItem}>
+                  .filter((dev) => dev.fingerprint !== fingerprintRef.current)
+                  .map((dev, idx) => (
+                    <li key={dev.sid || idx} style={S.deviceItem}>
                       <div style={S.deviceDot} />
-                      {name}&nbsp;
-                      <span style={{ color: 'var(--cy-text-muted)' }}>(CONNECTED)</span>
+                      <span>
+                        {dev.name || `Participant ${idx + 2}`}
+                        {dev.deviceLabel ? <span style={{ color: 'var(--cy-text-muted)' }}> · {dev.deviceLabel}</span> : null}
+                        &nbsp;<span style={{ color: 'var(--cy-text-muted)' }}>({dev.role === 'host' ? 'HOST' : 'CONNECTED'})</span>
+                      </span>
                     </li>
-                  ))}
+                  ))
+                : otherDeviceNames.map((name) => (
+                  <li key={name} style={S.deviceItem}>
+                    <div style={S.deviceDot} />
+                    {name}&nbsp;
+                    <span style={{ color: 'var(--cy-text-muted)' }}>(CONNECTED)</span>
+                  </li>
+                ))}
             </ul>
             <button
               id="change-name-btn"

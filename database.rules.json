@@ -18,6 +18,15 @@
           "updatedAt": {
             ".read": "auth != null && auth.token.roomId === $roomId"
           }
+        },
+        "signaling": {
+          "$targetUid": {
+            ".read": "auth != null && auth.token.roomId === $roomId && auth.uid === $targetUid",
+            ".write": "auth != null && auth.token.roomId === $roomId && auth.uid === $targetUid",
+            "$senderUid": {
+              ".write": "auth != null && auth.token.roomId === $roomId && (auth.uid === $senderUid || auth.uid === $targetUid)"
+            }
+          }
         }
       }
     }

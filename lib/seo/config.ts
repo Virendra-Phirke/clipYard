@@ -108,7 +108,9 @@ export function buildMetadata(): Metadata {
     },
     verification: {
       google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
-      bing: process.env.BING_SITE_VERIFICATION || undefined,
+      other: process.env.BING_SITE_VERIFICATION 
+        ? { 'msvalidate.01': process.env.BING_SITE_VERIFICATION }
+        : undefined,
     },
   }
 }

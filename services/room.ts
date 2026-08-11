@@ -222,6 +222,7 @@ export type RoomLiveState = {
       deviceLabel?: string
       fingerprint?: string
       sid: string
+      instanceId?: string
     }
   >
 }
@@ -267,11 +268,12 @@ export async function sendPresence(
   fingerprint: string,
   deviceLabel: string,
   name: string,
+  instanceId?: string,
 ): Promise<void> {
   await fetch(`/api/rooms/${roomId}?token=${encodeURIComponent(token)}`, {
     method: 'POST',
     headers: { ...authHeaders(token, fingerprint), 'content-type': 'application/json' },
-    body: JSON.stringify({ type: 'presence', deviceLabel, name }),
+    body: JSON.stringify({ type: 'presence', deviceLabel, name, instanceId }),
   })
 }
 

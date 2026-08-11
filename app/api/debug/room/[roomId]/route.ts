@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getFirebaseAdmin } from '@/lib/firebase-admin'
 
-export async function GET(request: Request, { params }: { params: { roomId: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
   try {
-    const roomId = String(params.roomId || '').toLowerCase()
+    const resolvedParams = await params
+    const roomId = String(resolvedParams.roomId || '').toLowerCase()
     const { database } = getFirebaseAdmin()
     const snap = await database.ref(`rooms/${roomId}`).get()
     const val = snap.val()
