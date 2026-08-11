@@ -3,6 +3,9 @@
 import { useState, type CSSProperties } from 'react'
 import type { Transfer } from '@/lib/webrtc/types'
 
+/**
+ * Props for the ReceivedFileCard component.
+ */
 interface ReceivedFileCardProps {
   transfer: Transfer
   onDownload: (transfer: Transfer) => void
