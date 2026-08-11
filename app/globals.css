@@ -208,12 +208,6 @@ nav {
     box-shadow: none;
   }
 }
-
-/* ══════════════════════════════════════════════════════════════════════════
-   RESPONSIVE LAYOUT HELPERS
-   Used via class names on the grid containers.
-   ══════════════════════════════════════════════════════════════════════════ */
-
 /* Home page: "How it works" grid — 12-col desktop, 1-col mobile */
 .cy-features-grid {
   display: grid;
