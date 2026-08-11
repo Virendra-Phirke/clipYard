@@ -66,58 +66,72 @@ export async function GET(request: Request, { params }: { params: Promise<{ room
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
-  const resolvedParams = await params
-  const roomId = String(resolvedParams.roomId || '').toLowerCase()
-  const payload = await getRoomContext(request, roomId)
-  if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const resolvedParams = await params
+    const roomId = String(resolvedParams.roomId || '').toLowerCase()
+    const payload = await getRoomContext(request, roomId)
+    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json().catch(() => ({}))
-  const nextText = sanitizeClipboard(typeof body.text === 'string' ? body.text : '')
+    const body = await request.json()
+    const nextText = sanitizeClipboard(typeof body.text === 'string' ? body.text : '')
 
-  const { database } = getFirebaseAdmin()
-  const roomSnapshot = await database.ref(`rooms/${roomId}/meta`).get()
-  const meta = roomSnapshot.val()
-  if (!meta || meta.status === 'closed') {
-    return NextResponse.json({ error: 'That room is unavailable' }, { status: 404 })
+    const { database } = getFirebaseAdmin()
+    const roomSnapshot = await database.ref(`rooms/${roomId}/meta`).get()
+    const meta = roomSnapshot.val()
+    if (!meta || meta.status === 'closed') {
+      return NextResponse.json({ error: 'That room is unavailable' }, { status: 404 })
+    }
+
+    await database.ref(`rooms/${roomId}/clip`).update({
+      text: encryptRoomText(nextText),
+      updatedAt: ServerValue.TIMESTAMP,
+      updatedBy: payload.sid,
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error: any) {
+    if (error?.code === 'ECONNRESET' || error?.message === 'aborted') {
+      return new Response(null, { status: 499 }) // Client Closed Request
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-
-  await database.ref(`rooms/${roomId}/clip`).update({
-    text: encryptRoomText(nextText),
-    updatedAt: ServerValue.TIMESTAMP,
-    updatedBy: payload.sid,
-  })
-
-  return NextResponse.json({ ok: true })
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
-  const resolvedParams = await params
-  const roomId = String(resolvedParams.roomId || '').toLowerCase()
-  const payload = await getRoomContext(request, roomId)
-  if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  try {
+    const resolvedParams = await params
+    const roomId = String(resolvedParams.roomId || '').toLowerCase()
+    const payload = await getRoomContext(request, roomId)
+    if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await request.json().catch(() => ({}))
-  const fingerprint = request.headers.get('x-device-fingerprint') || payload.sid
-  const name = typeof body.name === 'string' ? body.name.trim().slice(0, 24) : ''
-  const deviceLabel = typeof body.deviceLabel === 'string' ? body.deviceLabel.trim() : ''
-  const instanceId = typeof body.instanceId === 'string' ? body.instanceId : null
+    const body = await request.json()
+    const fingerprint = request.headers.get('x-device-fingerprint') || payload.sid
+    const name = typeof body.name === 'string' ? body.name.trim().slice(0, 24) : ''
+    const deviceLabel = typeof body.deviceLabel === 'string' ? body.deviceLabel.trim() : ''
+    const instanceId = typeof body.instanceId === 'string' ? body.instanceId : null
 
-  const { database } = getFirebaseAdmin()
-  const presenceData: any = {
-    lastSeen: ServerValue.TIMESTAMP,
-    role: payload.role,
-    name,
-    deviceLabel,
-    fingerprint,
-    sid: payload.sid,
+    const { database } = getFirebaseAdmin()
+    const presenceData: any = {
+      lastSeen: ServerValue.TIMESTAMP,
+      role: payload.role,
+      name,
+      deviceLabel,
+      fingerprint,
+      sid: payload.sid,
+    }
+    if (instanceId) {
+      presenceData.instanceId = instanceId
+    }
+
+    await database.ref(`rooms/${roomId}/presence/${payload.sid}`).set(presenceData)
+
+    return NextResponse.json({ ok: true })
+  } catch (error: any) {
+    if (error?.code === 'ECONNRESET' || error?.message === 'aborted') {
+      return new Response(null, { status: 499 })
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
-  if (instanceId) {
-    presenceData.instanceId = instanceId
-  }
-
-  await database.ref(`rooms/${roomId}/presence/${payload.sid}`).set(presenceData)
-
-  return NextResponse.json({ ok: true })
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ roomId: string }> }) {
