@@ -122,7 +122,7 @@ html.light {
   --cy-primary: #16856a;
   --cy-primary-hover: #006a53;
   --cy-primary-text: #006a53;
-  --cy-on-primary: #fdfffc;
+  --cy-on-primary: #ffffff;
   --cy-error: #ba1a1a;
   --cy-warning: #e89c2a;
   --cy-secondary-text: #555f71;
@@ -148,7 +148,7 @@ html.dark {
   --cy-primary: #78d8b9;
   --cy-primary-hover: #94f5d4;
   --cy-primary-text: #78d8b9;
-  --cy-on-primary: #00382a;
+  --cy-on-primary: #000000;
   --cy-error: #ffb4ab;
   --cy-warning: #f0c060;
   --cy-secondary-text: #b0b0b0;
