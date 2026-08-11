@@ -7,6 +7,7 @@
 
 // ─── Peer connection status ─────────────────────────────────────────────────
 
+/** Current connection state of a WebRTC peer */
 export type PeerStatus = 'connecting' | 'connected' | 'disconnected' | 'failed'
 
 // ─── Transfer protocol messages (sent as JSON over DataChannel) ─────────────

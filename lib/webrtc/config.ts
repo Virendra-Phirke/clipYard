@@ -1,3 +1,6 @@
+/**
+ * Configuration settings for file transfers via WebRTC.
+ */
 export const FILE_TRANSFER_CONFIG = {
   TESTING_MODE: true,
 
