@@ -1,7 +1,7 @@
 export const FILE_TRANSFER_CONFIG = {
   TESTING_MODE: true,
 
-  MAX_FILE_SIZE: 500 * 1024 * 1024, // 500 MB temporary test limit
+  MAX_FILE_SIZE: 50 * 1024 * 1024, // 50 MB temporary test limit
 
   ALLOWED_CATEGORIES: ['image', 'video', 'document', 'file'] as const,
 
