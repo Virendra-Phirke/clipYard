@@ -21,58 +21,86 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '12px',
-    padding: '32px 24px',
+    gap: '16px',
+    padding: '48px 24px',
     borderWidth: '2px',
     borderStyle: 'dashed',
     borderColor: 'var(--cy-border)',
-    borderRadius: '4px',
+    borderRadius: '12px',
     backgroundColor: 'var(--cy-surface)',
     cursor: 'pointer',
-    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-    minHeight: '120px',
+    transition: 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+    minHeight: '180px',
     userSelect: 'none',
     outline: 'none',
+    position: 'relative',
+    overflow: 'hidden',
   },
   dropZoneActive: {
     borderColor: 'var(--cy-primary)',
     backgroundColor: 'var(--cy-surface-container)',
     transform: 'scale(1.02)',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
   },
   dropZoneDisabled: {
     opacity: 0.5,
     cursor: 'not-allowed',
+    transform: 'none',
   },
-  icon: {
-    fontSize: '28px',
-    color: 'var(--cy-text-muted)',
+  iconContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '56px',
+    height: '56px',
+    borderRadius: '50%',
+    backgroundColor: 'var(--cy-surface-container)',
+    color: 'var(--cy-text-secondary)',
+    transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease, color 0.3s ease',
+  },
+  iconContainerHovered: {
+    transform: 'scale(1.1) translateY(-4px)',
+    backgroundColor: 'var(--cy-surface-container-high, rgba(255,255,255,0.05))',
+    color: 'var(--cy-text-primary)',
+  },
+  iconContainerActive: {
+    transform: 'scale(1.15) translateY(2px)',
+    backgroundColor: 'var(--cy-primary)',
+    color: 'var(--cy-background)',
   },
   label: {
     fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '13px',
-    lineHeight: '18px',
-    color: 'var(--cy-text-secondary)',
+    fontSize: '14px',
+    fontWeight: 500,
+    color: 'var(--cy-text-primary)',
     textAlign: 'center',
-    letterSpacing: '0.02em',
+    letterSpacing: '0.01em',
+  },
+  labelHighlight: {
+    color: 'var(--cy-primary)',
   },
   sublabel: {
     fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '11px',
-    lineHeight: '16px',
+    fontSize: '12px',
+    lineHeight: '1.6',
     color: 'var(--cy-text-muted)',
     textAlign: 'center',
     letterSpacing: '0.02em',
+    maxWidth: '280px',
   },
   error: {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '12px',
     lineHeight: '16px',
     color: 'var(--cy-error)',
-    padding: '8px 12px',
-    backgroundColor: 'var(--cy-surface)',
+    padding: '10px 14px',
+    backgroundColor: 'rgba(255, 59, 48, 0.1)',
     border: '1.5px solid var(--cy-error)',
-    borderRadius: '4px',
-    marginTop: '8px',
+    borderRadius: '6px',
+    marginTop: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   },
 }
 
@@ -191,14 +219,24 @@ export default function ImageUploader({ onImageSelected, disabled }: ImageUpload
         }}
         aria-label="Select or drop an image to share"
       >
-        <span className="material-symbols-outlined" style={styles.icon}>
-          add_photo_alternate
-        </span>
+        <div style={{
+          ...styles.iconContainer,
+          ...(isHovered && !isDragging && !disabled ? styles.iconContainerHovered : {}),
+          ...(isDragging && !disabled ? styles.iconContainerActive : {})
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>
+            {isDragging ? 'file_download' : 'add_photo_alternate'}
+          </span>
+        </div>
+        
         <span style={styles.label}>
-          {isDragging ? 'Drop image here' : 'Drop image here or click to browse'}
+          {isDragging ? 'Drop it like it\'s hot!' : (
+            <>Drop image here or <span style={styles.labelHighlight}>click to browse</span></>
+          )}
         </span>
         <span style={styles.sublabel}>
-          Ctrl+V to paste · Max 10 MB · JPEG, PNG, WebP, GIF, BMP, SVG
+          Paste (Ctrl+V) · Max 10 MB <br/>
+          JPEG, PNG, WebP, GIF, SVG
         </span>
         <input
           ref={fileInputRef}
@@ -210,7 +248,12 @@ export default function ImageUploader({ onImageSelected, disabled }: ImageUpload
           tabIndex={-1}
         />
       </div>
-      {error && <div style={styles.error}>{error}</div>}
+      {error && (
+        <div style={styles.error}>
+          <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>error</span>
+          {error}
+        </div>
+      )}
     </div>
   )
 }
