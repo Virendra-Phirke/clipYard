@@ -83,7 +83,11 @@ export function useImageTransfer({
       })
 
       if (restoredTransfers.length > 0) {
-        setTransfers((prev) => [...prev, ...restoredTransfers])
+        setTransfers((prev) => {
+          const existingIds = new Set(prev.map(t => t.id))
+          const newTransfers = restoredTransfers.filter(t => !existingIds.has(t.id))
+          return [...prev, ...newTransfers]
+        })
       }
       setHasLoadedDB(true)
     }).catch(console.error)
