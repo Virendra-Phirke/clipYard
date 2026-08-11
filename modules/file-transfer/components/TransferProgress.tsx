@@ -2,6 +2,9 @@
 
 import type { CSSProperties } from 'react'
 
+/**
+ * Props for the TransferProgress component.
+ */
 interface TransferProgressProps {
   progress: number
   bytesSent?: number
