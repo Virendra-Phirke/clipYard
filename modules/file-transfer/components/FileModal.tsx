@@ -4,6 +4,7 @@ import { type CSSProperties, useEffect } from 'react'
 import { getFileCategory } from '@/lib/webrtc/fileTransfer'
 import { Download } from 'lucide-react'
 import { WaveformPlayer } from './WaveformPlayer'
+import { CustomVideoPlayer } from './CustomVideoPlayer'
 
 /**
  * Props for the FileModal component.
@@ -193,9 +194,9 @@ export const FileModal = ({ url, fileName, mimeType, blob, onClose }: FileModalP
         </div>
       </div>
       
-      <div style={S.mediaContainer} onClick={(e) => e.stopPropagation()}>
+      <div style={{ ...S.mediaContainer, padding: 0 }} onClick={(e) => e.stopPropagation()}>
         {category === 'video' ? (
-          <video src={url} controls autoPlay style={S.media} />
+          <CustomVideoPlayer url={url} />
         ) : category === 'document' || category === 'file' ? (
           <iframe src={url} style={S.iframe} title={fileName} />
         ) : (
