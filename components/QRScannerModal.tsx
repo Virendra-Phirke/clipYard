@@ -96,6 +96,7 @@ export function QRScannerModal({ open, onOpenChange, onResult }: QRScannerModalP
           <div className="relative w-full aspect-square bg-black">
             {open && (
               <Scanner
+                formats={['qr_code']}
                 onScan={(result) => {
                   if (result && result.length > 0 && result[0].rawValue) {
                     onResult(result[0].rawValue);
