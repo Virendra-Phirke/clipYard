@@ -1,7 +1,7 @@
 'use client';
 
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { useState, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 
@@ -29,14 +29,19 @@ export function QRScannerModal({ open, onOpenChange, onResult }: QRScannerModalP
           throw new Error('HTTPS_REQUIRED');
         }
 
-        html5QrCode = new Html5Qrcode("qr-reader");
+        // Optimize performance by strictly telling the scanner to only look for QR_CODE.
+        // This prevents the engine from parsing frames for every other barcode format.
+        html5QrCode = new Html5Qrcode("qr-reader", {
+          formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
+          verbose: false
+        });
         
         await html5QrCode.start(
           { facingMode: "environment" }, 
           {
-            fps: 10,
+            fps: 30, // Increased frame rate for instant scans
             qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
+            // Removed aspectRatio to prevent expensive browser cropping
           },
           (decodedText) => {
             if (isComponentMounted) {

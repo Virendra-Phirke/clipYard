@@ -114,8 +114,8 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
   // Control referrer information sent with requests.
   h.set('Referrer-Policy', 'strict-origin-when-cross-origin')
 
-  // Restrict browser feature access.
-  h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+  // Restrict browser feature access (but allow camera for QR scanning).
+  h.set('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()')
 
   // Enforce HTTPS for 1 year (only effective in production over HTTPS).
   h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
