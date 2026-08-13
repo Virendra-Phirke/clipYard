@@ -1,9 +1,20 @@
 'use client';
 
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Scanner } from '@yudiel/react-qr-scanner';
+import { Scanner, setZXingModuleOverrides } from '@yudiel/react-qr-scanner';
 import { useState } from 'react';
 import { AlertCircle } from 'lucide-react';
+
+// Next.js doesn't serve the WASM file from node_modules by default.
+// We point the barcode-detector to fetch it from unpkg CDN to prevent "Failed to fetch" errors.
+setZXingModuleOverrides({
+  locateFile: (path, prefix) => {
+    if (path.endsWith('.wasm')) {
+      return `https://unpkg.com/barcode-detector@3.2.1/dist/${path}`;
+    }
+    return prefix + path;
+  }
+});
 
 interface QRScannerModalProps {
   open: boolean;
