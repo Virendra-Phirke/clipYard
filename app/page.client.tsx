@@ -3,6 +3,8 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { QRScannerModal } from "@/components/QRScannerModal";
+import { QrCode } from "lucide-react";
 
 /**
  * Client-side component for the home page.
@@ -12,6 +14,7 @@ export default function HomePageClient() {
   const [roomId, setRoomId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   async function createRoom() {
     setLoading(true);
@@ -49,6 +52,29 @@ export default function HomePageClient() {
       return;
     }
     router.push(`/room/${normalized}`);
+  }
+
+  function handleScanResult(url: string) {
+    try {
+      // The QR code contains the full URL like https://clipyard.com/room/abcde123
+      const parsedUrl = new URL(url);
+      if (parsedUrl.pathname.startsWith('/room/')) {
+        const id = parsedUrl.pathname.replace('/room/', '');
+        if (id) {
+          setScannerOpen(false);
+          router.push(`/room/${id}`);
+        }
+      } else {
+        setError("Invalid ClipYard QR code.");
+        setScannerOpen(false);
+      }
+    } catch {
+      // If it's not a full URL, maybe it's just the room ID
+      if (url && url.length >= 4) {
+        setScannerOpen(false);
+        router.push(`/room/${url}`);
+      }
+    }
   }
 
 
@@ -298,27 +324,54 @@ export default function HomePageClient() {
               <button
                 type="submit"
                 style={{
-                  fontFamily: "JetBrains Mono, monospace",
+                  backgroundColor: "var(--cy-primary-text)",
+                  color: "var(--cy-surface-white)",
+                  fontFamily: "Hanken Grotesk, sans-serif",
                   fontSize: "14px",
-                  letterSpacing: "0.02em",
-                  fontWeight: 500,
-                  color: "var(--cy-primary)",
-                  background: "none",
+                  lineHeight: "20px",
+                  fontWeight: 600,
+                  padding: "8px 16px",
+                  borderRadius: "2px",
                   border: "none",
-                  padding: "0 12px",
                   cursor: "pointer",
-                  transition: "color 0.2s ease",
+                  transition: "opacity 0.2s ease",
                 }}
                 onMouseEnter={(e) =>
-                  ((e.currentTarget.style.color) = "var(--cy-primary-text)")
+                  ((e.currentTarget as HTMLElement).style.opacity = "0.9")
                 }
                 onMouseLeave={(e) =>
-                  ((e.currentTarget.style.color) = "var(--cy-primary)")
+                  ((e.currentTarget as HTMLElement).style.opacity = "1")
                 }
               >
-                Join →
+                Join
               </button>
             </form>
+
+            <button
+              onClick={() => setScannerOpen(true)}
+              title="Scan QR Code"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "44px",
+                height: "44px",
+                backgroundColor: "var(--cy-surface)",
+                border: "1.5px solid var(--cy-border)",
+                borderRadius: "4px",
+                color: "var(--cy-text)",
+                cursor: "pointer",
+                transition: "background-color 0.2s ease",
+              }}
+              onMouseEnter={(e) =>
+                ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--cy-surface-container)")
+              }
+              onMouseLeave={(e) =>
+                ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--cy-surface)")
+              }
+            >
+              <QrCode size={20} />
+            </button>
           </div>
 
           {error && (
