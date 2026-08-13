@@ -24,40 +24,11 @@ interface QRScannerModalProps {
 
 export function QRScannerModal({ open, onOpenChange, onResult }: QRScannerModalProps) {
   const [error, setError] = useState<string | null>(null);
-  const [permissionGranted, setPermissionGranted] = useState(false);
 
-  // Reset state when modal opens/closes
-  if (!open && permissionGranted) {
-    setPermissionGranted(false);
+  // Reset error when modal closes
+  if (!open && error) {
     setError(null);
   }
-
-  const requestCamera = async () => {
-    try {
-      setError(null);
-      if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
-        throw new Error('HTTPS_REQUIRED');
-      }
-      // Request permission explicitly with a user gesture, using simple constraints 
-      // so it doesn't fail on devices without a rear camera.
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      // Stop the stream immediately, we just wanted the permission. 
-      // The Scanner component will request its own stream.
-      stream.getTracks().forEach(track => track.stop());
-      setPermissionGranted(true);
-    } catch (err: any) {
-      console.error('Camera permission error:', err);
-      if (err.message === 'HTTPS_REQUIRED') {
-        setError("Camera access requires HTTPS. If you are on a local network, you must serve the app over HTTPS.");
-      } else if (err.name === 'NotAllowedError') {
-        setError("Camera permission was denied. Please allow camera access in your browser settings and try again.");
-      } else if (err.name === 'NotFoundError') {
-        setError("No camera was found on your device.");
-      } else {
-        setError("Unable to access camera: " + (err.message || "Unknown error"));
-      }
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -70,26 +41,10 @@ export function QRScannerModal({ open, onOpenChange, onResult }: QRScannerModalP
             <AlertCircle size={48} className="mb-4" />
             <p className="font-medium">{error}</p>
             <button 
-              onClick={requestCamera}
+              onClick={() => setError(null)}
               className="mt-6 px-4 py-2 bg-zinc-800 text-white rounded-md hover:bg-zinc-700 transition"
             >
               Try Again
-            </button>
-          </div>
-        ) : !permissionGranted ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center text-white min-h-[300px]">
-            <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-3xl">photo_camera</span>
-            </div>
-            <h3 className="text-lg font-semibold mb-2">Camera Access Required</h3>
-            <p className="text-zinc-400 mb-6 text-sm">
-              We need access to your camera to scan the QR code.
-            </p>
-            <button 
-              onClick={requestCamera}
-              className="px-6 py-3 bg-[var(--cy-primary)] text-white rounded-md font-medium hover:opacity-90 transition"
-            >
-              Allow Camera Access
             </button>
           </div>
         ) : (
@@ -104,7 +59,11 @@ export function QRScannerModal({ open, onOpenChange, onResult }: QRScannerModalP
                 }}
                 onError={(e: any) => {
                   console.error('Scanner internal error:', e);
-                  setError(e?.message || e?.name || String(e) || "Scanner encountered an unknown error.");
+                  if (typeof navigator !== 'undefined' && !navigator.mediaDevices) {
+                    setError("Camera access requires HTTPS. If you are on a local network, you must serve the app over HTTPS.");
+                  } else {
+                    setError(e?.message || e?.name || String(e) || "Unable to access camera. Please check permissions.");
+                  }
                 }}
                 styles={{
                   container: {
