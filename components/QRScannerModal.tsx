@@ -103,7 +103,7 @@ export function QRScannerModal({ open, onOpenChange, onResult }: QRScannerModalP
                 }}
                 onError={(e: any) => {
                   console.error('Scanner internal error:', e);
-                  setError("Scanner encountered an error. Please try again.");
+                  setError(e?.message || e?.name || String(e) || "Scanner encountered an unknown error.");
                 }}
                 styles={{
                   container: {
