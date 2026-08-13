@@ -21,9 +21,10 @@ import { FILE_TRANSFER_CONFIG } from './config'
 
 // ─── Validation & Categorization ────────────────────────────────────────────
 
-export function getFileCategory(mimeType: string): 'image' | 'video' | 'document' | 'file' {
+export function getFileCategory(mimeType: string): 'image' | 'video' | 'audio' | 'document' | 'file' {
   if (mimeType.startsWith('image/')) return 'image'
   if (mimeType.startsWith('video/')) return 'video'
+  if (mimeType.startsWith('audio/')) return 'audio'
   if (
     mimeType.startsWith('text/') ||
     mimeType === 'application/pdf' ||
