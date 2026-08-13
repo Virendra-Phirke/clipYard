@@ -128,7 +128,12 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
 
   // 2. Setup standard HTMLAudioElement for actual playback
   useEffect(() => {
-    const audio = new Audio(url)
+    let audioUrl = url
+    if (blob) {
+      audioUrl = URL.createObjectURL(blob)
+    }
+    
+    const audio = new Audio(audioUrl)
     audio.preload = 'metadata'
     audioRef.current = audio
 
@@ -149,8 +154,11 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
       audio.removeEventListener('ended', onEnded)
       audioRef.current = null
       cancelAnimationFrame(animFrameRef.current)
+      if (blob) {
+        URL.revokeObjectURL(audioUrl)
+      }
     }
-  }, [url])
+  }, [url, blob])
 
   // 3. RAF loop for waveform progress
   useEffect(() => {

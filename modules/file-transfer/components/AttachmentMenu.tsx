@@ -27,18 +27,14 @@ import {
   FileText,
   Plus,
   SwitchCamera,
-  Play,
-  Pause,
   Download,
   X,
 } from 'lucide-react'
 import {
   getAudioContext,
   computePeaks,
-  drawWaveform,
-  formatTime,
-  getWaveformColors,
 } from '@/lib/webrtc/audioUtils'
+import { WaveformPlayer } from './WaveformPlayer'
 
 /* ────────────────────────────── Types ────────────────────────────── */
 
@@ -238,41 +234,6 @@ const style: Record<string, CSSProperties> = {
     color: 'var(--cy-text)',
     cursor: 'pointer',
   },
-  /* Audio dialog */
-  waveformWrap: {
-    width: '100%',
-    height: '80px',
-    borderRadius: '8px',
-    background: 'var(--cy-surface-container)',
-    cursor: 'pointer',
-    overflow: 'hidden',
-  },
-  audioControls: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    marginTop: '10px',
-  },
-  playBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '2rem',
-    height: '2rem',
-    borderRadius: '50%',
-    border: '1px solid var(--cy-border)',
-    background: 'var(--cy-text)',
-    color: 'var(--cy-surface)',
-    cursor: 'pointer',
-    flexShrink: 0,
-  },
-  audioTime: {
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '11px',
-    color: 'var(--cy-text-muted)',
-    fontVariantNumeric: 'tabular-nums',
-    whiteSpace: 'nowrap' as const,
-  },
 }
 
 /* ═══════════════════════════ COMPONENT ═══════════════════════════ */
@@ -296,13 +257,8 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
   /* Image preview dialog */
   const [previewImage, setPreviewImage] = useState<ImageAttachment | null>(null)
 
-  /* Audio player dialog */
+  /* Audio player state */
   const [playingAudio, setPlayingAudio] = useState<AudioAttachment | null>(null)
-  const dialogAudioRef = useRef<HTMLAudioElement | null>(null)
-  const dialogWaveformRef = useRef<HTMLCanvasElement>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [audioCurrentTime, setAudioCurrentTime] = useState(0)
-  const animFrameRef = useRef<number>(0)
 
   /* ── file inputs ── */
   const addAttachment = useCallback(
@@ -474,82 +430,6 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
       setCameraOpen(false)
     }, 'image/png')
   }, [facingMode, addAttachment])
-
-  /* ── Audio dialog player ── */
-  useEffect(() => {
-    if (!playingAudio) return
-    const audio = new Audio(playingAudio.objectUrl)
-    audio.preload = 'metadata'
-    dialogAudioRef.current = audio
-
-    const onPlay = () => setIsPlaying(true)
-    const onPause = () => setIsPlaying(false)
-    const onEnded = () => {
-      setIsPlaying(false)
-      setAudioCurrentTime(0)
-    }
-    audio.addEventListener('play', onPlay)
-    audio.addEventListener('pause', onPause)
-    audio.addEventListener('ended', onEnded)
-
-    return () => {
-      audio.pause()
-      audio.removeEventListener('play', onPlay)
-      audio.removeEventListener('pause', onPause)
-      audio.removeEventListener('ended', onEnded)
-      dialogAudioRef.current = null
-      cancelAnimationFrame(animFrameRef.current)
-    }
-  }, [playingAudio])
-
-  // RAF loop for waveform progress
-  useEffect(() => {
-    if (!playingAudio || !isPlaying) return
-    function tick() {
-      const audio = dialogAudioRef.current
-      const canvas = dialogWaveformRef.current
-      if (audio && canvas && playingAudio) {
-        setAudioCurrentTime(audio.currentTime)
-        const progress = audio.duration ? audio.currentTime / audio.duration : 0
-        drawWaveform(canvas, playingAudio.peaksLarge, progress, getWaveformColors())
-      }
-      animFrameRef.current = requestAnimationFrame(tick)
-    }
-    animFrameRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(animFrameRef.current)
-  }, [playingAudio, isPlaying])
-
-  // Draw initial waveform when dialog opens
-  useEffect(() => {
-    if (!playingAudio) return
-    requestAnimationFrame(() => {
-      const canvas = dialogWaveformRef.current
-      if (canvas) {
-        drawWaveform(canvas, playingAudio.peaksLarge, 0, getWaveformColors())
-      }
-    })
-  }, [playingAudio])
-
-  const togglePlay = useCallback(() => {
-    const audio = dialogAudioRef.current
-    if (!audio) return
-    if (audio.paused) {
-      audio.play().catch(() => {})
-    } else {
-      audio.pause()
-    }
-  }, [])
-
-  const seekWaveform = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const audio = dialogAudioRef.current
-      if (!audio || !audio.duration) return
-      const rect = e.currentTarget.getBoundingClientRect()
-      const fraction = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
-      audio.currentTime = fraction * audio.duration
-    },
-    [],
-  )
 
   const downloadAttachment = useCallback((att: Attachment) => {
     const url = att.type === 'image' ? att.dataUrl : att.objectUrl
@@ -828,65 +708,33 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
       </Dialog>
 
       {/* ── Audio Player Dialog ── */}
-      <Dialog
-        open={!!playingAudio}
-        onOpenChange={(open) => { if (!open) setPlayingAudio(null) }}
-      >
-        <DialogContent className="sm:max-w-sm" showCloseButton>
-          <DialogTitle className="sr-only">Audio Player</DialogTitle>
-          {playingAudio && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: 'var(--cy-text)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {playingAudio.fileName}
-              </div>
-              <div style={style.waveformWrap} onClick={seekWaveform}>
-                <canvas
-                  ref={dialogWaveformRef}
-                  style={{ width: '100%', height: '100%', display: 'block' }}
-                />
-              </div>
-              <div style={style.audioControls}>
-                <button
-                  style={style.playBtn}
-                  onClick={togglePlay}
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
-                >
-                  {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-                </button>
-                <span style={style.audioTime}>
-                  {formatTime(audioCurrentTime)}
-                </span>
-                <span style={{ ...style.audioTime, opacity: 0.5 }}>/</span>
-                <span style={style.audioTime}>
-                  {formatTime(playingAudio.duration)}
-                </span>
-              </div>
-              <button
-                onClick={() => downloadAttachment(playingAudio)}
-                style={{
-                  ...style.switchBtn,
-                  position: 'absolute',
-                  top: '8px',
-                  left: '8px',
-                }}
-                aria-label="Download"
-              >
-                <Download size={14} />
-              </button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {playingAudio && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'transparent'
+          }}
+          onClick={() => setPlayingAudio(null)}
+        >
+          <div style={{ background: '#1c1c1c', padding: '16px', borderRadius: '12px', border: '1px solid var(--cy-border)' }} onClick={(e) => e.stopPropagation()}>
+            <WaveformPlayer 
+              url={playingAudio.objectUrl} 
+              fileName={playingAudio.fileName} 
+              blob={playingAudio.file} 
+              onClose={() => setPlayingAudio(null)} 
+              onDownload={() => downloadAttachment(playingAudio)}
+            />
+          </div>
+        </div>
+      )}
     </>
   )
 }
