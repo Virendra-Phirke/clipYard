@@ -1037,8 +1037,8 @@ function PeersIndicator({
       >
         <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: otherCount > 0 ? 'var(--cy-primary)' : 'var(--cy-text-muted)', flexShrink: 0 }} />
         {otherCount > 0
-          ? `${otherCount} Connected`
-          : 'No peers'}
+          ? `${otherCount} P2P Connected`
+          : 'No P2P'}
       </div>
 
       {/* Hover popover */}
@@ -1066,15 +1066,6 @@ function PeersIndicator({
             Connected Devices
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {/* Local user */}
-            <li style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)', flexShrink: 0 }} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {userName}
-                <span style={{ color: 'var(--cy-text-muted)' }}> · {deviceLabel}</span>
-                &nbsp;<span style={{ color: 'var(--cy-text-muted)' }}>({role === 'host' ? 'HOST' : 'YOU'})</span>
-              </span>
-            </li>
             {/* Other devices */}
             {otherDevices.length > 0
               ? otherDevices.map((dev, idx) => (
