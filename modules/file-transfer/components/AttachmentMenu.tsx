@@ -653,8 +653,8 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
             <Plus size={16} />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" sideOffset={8} align="start">
-            <DropdownMenuItem asChild>
-              <label htmlFor="attach-photos" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer' }}>
+            <DropdownMenuItem style={{ padding: 0 }}>
+              <label htmlFor="attach-photos" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer', padding: '0.25rem 0.375rem' }}>
                 <ImageIcon size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
                 Photos &amp; videos
               </label>
@@ -674,14 +674,14 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
               Camera
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <label htmlFor="attach-audio" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer' }}>
+            <DropdownMenuItem style={{ padding: 0 }}>
+              <label htmlFor="attach-audio" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer', padding: '0.25rem 0.375rem' }}>
                 <Music size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
                 Audio
               </label>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <label htmlFor="attach-document" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer' }}>
+            <DropdownMenuItem style={{ padding: 0 }}>
+              <label htmlFor="attach-document" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer', padding: '0.25rem 0.375rem' }}>
                 <FileText size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
                 Document
               </label>
