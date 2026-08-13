@@ -131,13 +131,25 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
   // 2. Manage audio URL lifecycle
   useEffect(() => {
     if (blob) {
-      const u = URL.createObjectURL(blob)
+      let b = blob
+      if (!b.type || b.type === 'application/octet-stream') {
+        const extMatch = fileName.split('.').pop()?.toLowerCase() || ''
+        let mime = 'audio/webm'
+        if (extMatch === 'mp3') mime = 'audio/mpeg'
+        else if (extMatch === 'wav') mime = 'audio/wav'
+        else if (extMatch === 'ogg') mime = 'audio/ogg'
+        else if (extMatch === 'm4a' || extMatch === 'mp4') mime = 'audio/mp4'
+        else if (extMatch === 'aac') mime = 'audio/aac'
+        
+        b = new Blob([blob], { type: mime })
+      }
+      const u = URL.createObjectURL(b)
       setAudioUrl(u)
       return () => URL.revokeObjectURL(u)
     } else {
       setAudioUrl(url)
     }
-  }, [url, blob])
+  }, [url, blob, fileName])
 
   // 3. RAF loop for waveform progress
   useEffect(() => {
