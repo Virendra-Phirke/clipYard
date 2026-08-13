@@ -10,7 +10,7 @@ import { AlertCircle } from 'lucide-react';
 setZXingModuleOverrides({
   locateFile: (path, prefix) => {
     if (path.endsWith('.wasm')) {
-      return `https://unpkg.com/barcode-detector@3.2.1/dist/${path}`;
+      return `https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.1/dist/reader/${path}`;
     }
     return prefix + path;
   }
