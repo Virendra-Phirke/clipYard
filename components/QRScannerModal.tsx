@@ -38,8 +38,9 @@ export function QRScannerModal({ open, onOpenChange, onResult }: QRScannerModalP
       if (typeof navigator === 'undefined' || !navigator.mediaDevices) {
         throw new Error('HTTPS_REQUIRED');
       }
-      // Request permission explicitly with a user gesture
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      // Request permission explicitly with a user gesture, using simple constraints 
+      // so it doesn't fail on devices without a rear camera.
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       // Stop the stream immediately, we just wanted the permission. 
       // The Scanner component will request its own stream.
       stream.getTracks().forEach(track => track.stop());
