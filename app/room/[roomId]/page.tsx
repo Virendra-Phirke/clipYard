@@ -1119,14 +1119,14 @@ function QrHoverIcon({ roomUrl }: { roomUrl: string }) {
         <div
           style={{
             position: 'absolute',
-            bottom: 'calc(100% + 10px)',
-            right: 0,
+            top: 'calc(100% + 10px)',
+            right: '-10px', // slightly offset so it aligns well with the container
             backgroundColor: 'var(--cy-surface)',
             border: '1.5px solid var(--cy-border)',
             borderRadius: '4px',
             padding: '12px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-            zIndex: 30,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+            zIndex: 50,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
