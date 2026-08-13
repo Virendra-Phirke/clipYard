@@ -653,46 +653,45 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
             <Plus size={16} />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" sideOffset={8} align="start">
-            <DropdownMenuItem
-              id="attach-photos"
-              onSelect={() => setTimeout(() => photosInputRef.current?.click(), 10)}
-            >
-              <ImageIcon size={16} className="text-muted-foreground" />
-              Photos &amp; videos
+            <DropdownMenuItem asChild>
+              <label htmlFor="attach-photos" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer' }}>
+                <ImageIcon size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
+                Photos &amp; videos
+              </label>
             </DropdownMenuItem>
             <DropdownMenuItem
               id="attach-camera"
-              onSelect={() => {
+              onSelect={(e) => {
                 if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
                   openCamera()
                 } else {
-                  setTimeout(() => photosInputRef.current?.click(), 10)
+                  // Fallback: don't close the menu, let the user click the photos option
+                  photosInputRef.current?.click()
                 }
               }}
             >
-              <Camera size={16} className="text-muted-foreground" />
+              <Camera size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
               Camera
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              id="attach-audio"
-              onSelect={() => setTimeout(() => audioInputRef.current?.click(), 10)}
-            >
-              <Music size={16} className="text-muted-foreground" />
-              Audio
+            <DropdownMenuItem asChild>
+              <label htmlFor="attach-audio" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer' }}>
+                <Music size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
+                Audio
+              </label>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              id="attach-document"
-              onSelect={() => setTimeout(() => docInputRef.current?.click(), 10)}
-            >
-              <FileText size={16} className="text-muted-foreground" />
-              Document
+            <DropdownMenuItem asChild>
+              <label htmlFor="attach-document" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer' }}>
+                <FileText size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
+                Document
+              </label>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
         {/* Hidden file inputs */}
         <input
+          id="attach-photos"
           ref={photosInputRef}
           type="file"
           accept="image/*,video/*"
@@ -701,6 +700,7 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
           onChange={handlePhotos}
         />
         <input
+          id="attach-audio"
           ref={audioInputRef}
           type="file"
           accept="audio/*"
@@ -709,6 +709,7 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
           onChange={handleAudio}
         />
         <input
+          id="attach-document"
           ref={docInputRef}
           type="file"
           accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.zip,.rar,.odt,.odp,.ods"
