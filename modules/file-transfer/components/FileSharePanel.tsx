@@ -4,6 +4,7 @@ import { useState, type CSSProperties, type MutableRefObject } from 'react'
 import { useFileTransfer } from '../hooks/useFileTransfer'
 import { FileModal } from './FileModal'
 import { FileText, Music, Play, AlertCircle } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Transfer } from '@/lib/webrtc/types'
 
 interface FileSharePanelProps {
@@ -122,70 +123,90 @@ export function FileSharePanel({
   }
 
   return (
-    <div style={style.card}>
-      <h3 style={style.cardTitle}>
-        <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)' }}>folder_zip</span>
-        Shared Files
-      </h3>
+    <TooltipProvider delay={200}>
+      <div style={style.card}>
+        <h3 style={style.cardTitle}>
+          <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)' }}>folder_zip</span>
+          Shared Files
+        </h3>
 
-      <div style={style.row}>
-        {/* Render received files */}
-        {receivedFiles.map((f, i) => {
-          const isImage = f.mimeType.startsWith('image/')
-          const isVideo = f.mimeType.startsWith('video/')
-          const isAudio = f.mimeType.startsWith('audio/')
-          
-          if (isImage) {
-            return (
-              <div key={f.id || i} style={style.imageSlot} onClick={() => setViewingFile(f)} title={f.fileName}>
-                <img src={f.objectUrl} alt={f.fileName} style={style.slotImg} />
-              </div>
-            )
-          }
-          
-          if (isVideo) {
-            return (
-              <div key={f.id || i} style={style.iconSlot} onClick={() => setViewingFile(f)} title={f.fileName}>
-                <Play size={16} />
-              </div>
-            )
-          }
-          
-          if (isAudio) {
-            return (
-              <div key={f.id || i} style={style.iconSlot} onClick={() => setViewingFile(f)} title={f.fileName}>
-                <Music size={16} />
-              </div>
-            )
-          }
+        <div style={style.row}>
+          {/* Render received files */}
+          {receivedFiles.map((f, i) => {
+            const isImage = f.mimeType.startsWith('image/')
+            const isVideo = f.mimeType.startsWith('video/')
+            const isAudio = f.mimeType.startsWith('audio/')
+            
+            let icon
+            let hoverContent
 
-          return (
-            <div key={f.id || i} style={style.iconSlot} onClick={() => setViewingFile(f)} title={f.fileName}>
-              <FileText size={16} />
-            </div>
-          )
-        })}
+            if (isImage) {
+              icon = <img src={f.objectUrl} alt={f.fileName} style={style.slotImg} />
+              hoverContent = (
+                <div style={{ padding: '4px', maxWidth: '200px' }}>
+                  <img src={f.objectUrl} alt={f.fileName} style={{ width: '100%', borderRadius: '4px', marginBottom: '4px' }} />
+                  <div style={{ fontSize: '12px', wordBreak: 'break-all' }}>{f.fileName}</div>
+                </div>
+              )
+            } else if (isVideo) {
+              icon = <Play size={16} />
+              hoverContent = (
+                <div style={{ padding: '4px', maxWidth: '200px' }}>
+                  <video src={f.objectUrl} style={{ width: '100%', borderRadius: '4px', marginBottom: '4px' }} />
+                  <div style={{ fontSize: '12px', wordBreak: 'break-all' }}>{f.fileName}</div>
+                </div>
+              )
+            } else if (isAudio) {
+              icon = <Music size={16} />
+              hoverContent = <div style={{ fontSize: '12px', padding: '2px', wordBreak: 'break-all' }}>{f.fileName}</div>
+            } else {
+              icon = <FileText size={16} />
+              hoverContent = <div style={{ fontSize: '12px', padding: '2px', wordBreak: 'break-all' }}>{f.fileName}</div>
+            }
 
-        {/* Render active transfers */}
-        {activeTransfers.map((t, i) => (
-          <div key={t.id || i} style={style.iconSlot} title={`Receiving ${t.fileName}...`}>
-            {t.status === 'failed' ? <AlertCircle size={16} color="var(--cy-warning)" /> : <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)', animation: 'pulse 2s infinite' }}>download</span>}
-            {t.status === 'transferring' && (
-              <div style={{ ...style.progressOverlay, width: `${t.progress}%` }} />
-            )}
-          </div>
-        ))}
+            return (
+              <Tooltip key={f.id || i}>
+                <TooltipTrigger
+                  style={isImage ? style.imageSlot : style.iconSlot}
+                  onClick={() => setViewingFile(f)}
+                >
+                  {icon}
+                </TooltipTrigger>
+                <TooltipContent side="top" sideOffset={5} style={{ zIndex: 100 }}>
+                  {hoverContent}
+                </TooltipContent>
+              </Tooltip>
+            )
+          })}
+
+          {/* Render active transfers */}
+          {activeTransfers.map((t, i) => (
+            <Tooltip key={t.id || i}>
+              <TooltipTrigger style={style.iconSlot}>
+                {t.status === 'failed' ? <AlertCircle size={16} color="var(--cy-warning)" /> : <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)', animation: 'pulse 2s infinite' }}>download</span>}
+                {t.status === 'transferring' && (
+                  <div style={{ ...style.progressOverlay, width: `${t.progress}%` }} />
+                )}
+              </TooltipTrigger>
+              <TooltipContent side="top" sideOffset={5}>
+                <div style={{ fontSize: '12px', padding: '2px' }}>
+                  Receiving {t.fileName}... ({t.progress}%)
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+
+        {/* Full screen modal */}
+        {viewingFile && viewingFile.objectUrl && (
+          <FileModal
+            url={viewingFile.objectUrl}
+            fileName={viewingFile.fileName}
+            mimeType={viewingFile.mimeType}
+            onClose={() => setViewingFile(null)}
+          />
+        )}
       </div>
-
-      {/* Full screen modal */}
-      {viewingFile && viewingFile.objectUrl && (
-        <FileModal
-          url={viewingFile.objectUrl}
-          fileName={viewingFile.fileName}
-          mimeType={viewingFile.mimeType}
-          onClose={() => setViewingFile(null)}
-        />
-      )}
-    </div>
+    </TooltipProvider>
   )
 }
