@@ -12,6 +12,7 @@ interface FileModalProps {
   url: string
   fileName: string
   mimeType: string
+  blob?: Blob
   onClose: () => void
 }
 
@@ -30,6 +31,20 @@ const S: Record<string, CSSProperties> = {
     justifyContent: 'center',
     padding: '24px',
     backdropFilter: 'blur(4px)',
+  },
+  audioOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 9999,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '24px',
+    backgroundColor: 'transparent',
   },
   header: {
     position: 'absolute',
@@ -114,7 +129,7 @@ const S: Record<string, CSSProperties> = {
   },
 }
 
-export const FileModal = ({ url, fileName, mimeType, onClose }: FileModalProps) => {
+export const FileModal = ({ url, fileName, mimeType, blob, onClose }: FileModalProps) => {
   const category = getFileCategory(mimeType)
 
   // Close on Escape key
@@ -134,21 +149,39 @@ export const FileModal = ({ url, fileName, mimeType, onClose }: FileModalProps) 
     }
   }, [])
 
+  const handleDownload = () => {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+
+  if (category === 'audio') {
+    return (
+      <div style={S.audioOverlay} onClick={onClose}>
+        <div style={{ background: '#1c1c1c', padding: '16px', borderRadius: '12px', border: '1px solid var(--cy-border)' }} onClick={(e) => e.stopPropagation()}>
+          <WaveformPlayer url={url} fileName={fileName} blob={blob} onClose={onClose} onDownload={handleDownload} />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={S.header} onClick={(e) => e.stopPropagation()}>
         <div style={S.title}>{fileName}</div>
         <div style={S.headerActions}>
-          <a
-            href={url}
-            download={fileName}
+          <button
+            onClick={handleDownload}
             style={S.downloadBtn}
             onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8' }}
             onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
           >
             <Download size={16} />
             Download
-          </a>
+          </button>
           <button
             style={S.closeBtn}
             onClick={onClose}
@@ -163,10 +196,6 @@ export const FileModal = ({ url, fileName, mimeType, onClose }: FileModalProps) 
       <div style={S.mediaContainer} onClick={(e) => e.stopPropagation()}>
         {category === 'video' ? (
           <video src={url} controls autoPlay style={S.media} />
-        ) : category === 'audio' ? (
-          <div style={{ background: 'var(--cy-surface)', padding: '24px', borderRadius: '12px', border: '1px solid var(--cy-border)' }}>
-            <WaveformPlayer url={url} fileName={fileName} />
-          </div>
         ) : category === 'document' || category === 'file' ? (
           <iframe src={url} style={S.iframe} title={fileName} />
         ) : (

@@ -1,12 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react'
-import { Play, Pause } from 'lucide-react'
+import { Play, Pause, Download, X } from 'lucide-react'
 import { getAudioContext, computePeaks, drawWaveform, formatTime, getWaveformColors } from '@/lib/webrtc/audioUtils'
 
 interface WaveformPlayerProps {
   url: string
   fileName: string
+  blob?: Blob
+  onClose?: () => void
+  onDownload?: () => void
 }
 
 const style: Record<string, CSSProperties> = {
@@ -17,15 +20,27 @@ const style: Record<string, CSSProperties> = {
     width: '320px',
     maxWidth: '90vw',
   },
-  fileName: {
+  topBar: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  },
+  topBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--cy-text-muted)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '4px',
+    transition: 'color 0.2s',
+  },
+  extText: {
     fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: 500,
-    color: 'var(--cy-text)',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    marginBottom: '8px',
   },
   waveformWrap: {
     position: 'relative',
@@ -41,7 +56,8 @@ const style: Record<string, CSSProperties> = {
   },
   playBtn: {
     background: 'none',
-    border: 'none',
+    border: '1px solid var(--cy-border)',
+    borderRadius: '50%',
     color: 'var(--cy-text)',
     cursor: 'pointer',
     display: 'flex',
@@ -65,12 +81,14 @@ const style: Record<string, CSSProperties> = {
   }
 }
 
-export function WaveformPlayer({ url, fileName }: WaveformPlayerProps) {
+export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: WaveformPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioCurrentTime, setAudioCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [peaks, setPeaks] = useState<number[] | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const ext = fileName.split('.').pop()?.toLowerCase() || 'audio'
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -82,8 +100,14 @@ export function WaveformPlayer({ url, fileName }: WaveformPlayerProps) {
     const initAudio = async () => {
       try {
         setLoading(true)
-        const res = await fetch(url)
-        const arrayBuffer = await res.arrayBuffer()
+        let arrayBuffer: ArrayBuffer
+        if (blob) {
+          arrayBuffer = await blob.arrayBuffer()
+        } else {
+          const res = await fetch(url)
+          if (!res.ok) throw new Error('Network response was not ok')
+          arrayBuffer = await res.arrayBuffer()
+        }
         if (!active) return
         const ctx = getAudioContext()
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer)
@@ -92,7 +116,7 @@ export function WaveformPlayer({ url, fileName }: WaveformPlayerProps) {
         setPeaks(computePeaks(audioBuffer, 80))
         setLoading(false)
       } catch (err) {
-        console.error('Failed to decode audio for waveform preview', err)
+        console.warn('Failed to decode audio for waveform preview:', err)
         setLoading(false)
       }
     }
@@ -135,10 +159,10 @@ export function WaveformPlayer({ url, fileName }: WaveformPlayerProps) {
     function tick() {
       const audio = audioRef.current
       const canvas = canvasRef.current
-      if (audio && canvas) {
+      if (audio && canvas && peaks) {
         setAudioCurrentTime(audio.currentTime)
         const progress = audio.duration ? audio.currentTime / audio.duration : 0
-        drawWaveform(canvas, peaks, progress, getWaveformColors())
+        drawWaveform(canvas, peaks as number[], progress, getWaveformColors())
       }
       animFrameRef.current = requestAnimationFrame(tick)
     }
@@ -187,7 +211,28 @@ export function WaveformPlayer({ url, fileName }: WaveformPlayerProps) {
 
   return (
     <div style={style.container}>
-      <div style={style.fileName}>{fileName}</div>
+      <div style={style.topBar}>
+        <button
+          style={style.topBtn}
+          onClick={onDownload}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--cy-text)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cy-text-muted)' }}
+        >
+          <Download size={14} />
+          <span style={style.extText}>{ext}</span>
+        </button>
+        {onClose && (
+          <button
+            style={style.topBtn}
+            onClick={onClose}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--cy-text)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cy-text-muted)' }}
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
+
       {loading ? (
         <div style={style.loading}>Generating waveform...</div>
       ) : peaks ? (
@@ -197,7 +242,7 @@ export function WaveformPlayer({ url, fileName }: WaveformPlayerProps) {
           </div>
           <div style={style.audioControls}>
             <button
-              style={style.playBtn}
+              style={{ ...style.playBtn, padding: isPlaying ? '6px' : '6px 4px 6px 8px' } as any}
               onClick={togglePlay}
               aria-label={isPlaying ? 'Pause' : 'Play'}
             >

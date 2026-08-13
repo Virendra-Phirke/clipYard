@@ -203,6 +203,7 @@ export function FileSharePanel({
             url={viewingFile.objectUrl}
             fileName={viewingFile.fileName}
             mimeType={viewingFile.mimeType}
+            blob={viewingFile.blob}
             onClose={() => setViewingFile(null)}
           />
         )}
