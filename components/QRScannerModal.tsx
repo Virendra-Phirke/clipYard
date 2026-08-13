@@ -36,7 +36,11 @@ export function QRScannerModal({ open, onOpenChange, onResult }: QRScannerModalP
                 }}
                 onError={(e) => {
                   console.error(e);
-                  setError("Unable to access camera. Please check your permissions.");
+                  if (typeof navigator !== 'undefined' && !navigator.mediaDevices) {
+                    setError("Camera access requires HTTPS. If you are on a local network, you must serve the app over HTTPS.");
+                  } else {
+                    setError("Unable to access camera. Please ensure you have granted camera permissions.");
+                  }
                 }}
                 styles={{
                   container: {
