@@ -931,9 +931,12 @@ export default function RoomPage() {
 
           {/* Room Info */}
           <div style={S.sideCardAlt}>
-            <h3 style={S.sideCardTitle}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)' }}>info</span>
-              Room Info
+            <h3 style={{ ...S.sideCardTitle, justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)' }}>info</span>
+                Room Info
+              </div>
+              <QrHoverIcon roomUrl={roomUrl} />
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div style={S.infoRow}>
@@ -956,9 +959,6 @@ export default function RoomPage() {
               </div> */}
             </div>
           </div>
-
-          {/* QR Code */}
-          <QrCard roomUrl={roomUrl} />
 
         </div>
       </main>
@@ -1085,6 +1085,89 @@ function PeersIndicator({
                 </li>
               ))}
           </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── QR hover icon: small icon that reveals full QR on hover ── */
+function QrHoverIcon({ roomUrl }: { roomUrl: string }) {
+  const [hovered, setHovered] = useState(false)
+  const { theme } = useTheme()
+
+  return (
+    <div
+      style={{ position: 'relative', display: 'inline-flex' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span
+        className="material-symbols-outlined"
+        style={{
+          fontSize: '18px',
+          color: hovered ? 'var(--cy-primary)' : 'var(--cy-text-muted)',
+          cursor: 'pointer',
+          transition: 'color 0.15s ease',
+        }}
+      >
+        qr_code_2
+      </span>
+
+      {/* Hover popover with full QR */}
+      {hovered && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 10px)',
+            right: 0,
+            backgroundColor: 'var(--cy-surface)',
+            border: '1.5px solid var(--cy-border)',
+            borderRadius: '4px',
+            padding: '12px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+            zIndex: 30,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '11px',
+              letterSpacing: '0.08em',
+              fontWeight: 500,
+              color: 'var(--cy-text)',
+              textTransform: 'uppercase',
+            }}
+          >
+            Scan to Join
+          </span>
+          <div
+            style={{
+              width: '160px',
+              height: '160px',
+              backgroundColor: 'var(--cy-surface-white)',
+              border: '1.5px solid var(--cy-border)',
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {roomUrl && (
+              <QRCodeSVG
+                value={roomUrl}
+                size={148}
+                fgColor={theme === 'dark' ? '#78d8b9' : '#006a53'}
+                bgColor={theme === 'dark' ? '#1c1c1c' : '#ffffff'}
+                level="M"
+                style={{ width: '100%', height: '100%' }}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
