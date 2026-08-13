@@ -124,7 +124,7 @@ clipYard/
 │   ├── room.ts                   # Room API calls, token cache, presence, username
 │   └── fingerprint.ts            # FingerprintJS wrapper + local fallback
 │
-├── middleware.ts                 # Edge middleware: rate limiting + security headers
+├── proxy.ts                      # Proxy: rate limiting + security headers
 ├── database.rules.json           # Firebase RTDB security rules
 ├── next.config.mjs               # Next.js configuration
 ├── tsconfig.json                 # TypeScript configuration

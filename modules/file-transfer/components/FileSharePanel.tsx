@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties, type MutableRefObject } from 'react'
 import { useFileTransfer } from '../hooks/useFileTransfer'
 import { FileUploader } from './FileUploader'
 import { FilePreview } from './FilePreview'
@@ -18,6 +18,9 @@ interface FileSharePanelProps {
   localUid: string
   localName: string
   presence: Record<string, { name?: string; sid?: string; [key: string]: unknown }>
+  /** Optional ref that will be populated with the internal sendFile function,
+   *  so external UI (e.g. AttachmentMenu) can trigger file transfers. */
+  sendFileRef?: MutableRefObject<((file: File) => void) | null>
 }
 
 const S: Record<string, CSSProperties> = {
@@ -117,6 +120,7 @@ export const FileSharePanel = ({
   localUid,
   localName,
   presence,
+  sendFileRef,
 }: FileSharePanelProps) => {
   const {
     transfers,
@@ -134,10 +138,12 @@ export const FileSharePanel = ({
     enabled: true,
   })
 
-  // We could stage multiple files, but for simplicity of the prompt,
-  // queueFile directly handles it in useFileTransfer. However, the user might want to 
-  // review them first like before. But in FileUploader we added multiple. Let's send directly on drop for testing ease, or hold in state?
-  // Let's hold in state if they want. Or just send immediately for better UX. Let's send immediately.
+  // Expose sendFile to the parent via the ref so external UI can trigger transfers
+  useEffect(() => {
+    if (sendFileRef) sendFileRef.current = sendFile
+    return () => { if (sendFileRef) sendFileRef.current = null }
+  }, [sendFile, sendFileRef])
+
   const handleFileSelected = useCallback((file: File) => {
     sendFile(file)
   }, [sendFile])

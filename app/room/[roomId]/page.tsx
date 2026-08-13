@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { FileSharePanel } from '@/modules/file-transfer'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { FileSharePanel, AttachmentMenu } from '@/modules/file-transfer'
+import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useDebounce } from 'use-debounce'
 import { QRCodeSVG } from 'qrcode.react'
@@ -372,6 +372,12 @@ export default function RoomPage() {
   const latestPresenceRef = useRef<Record<string, any>>({})
   const firebaseUidRef = useRef('')
   const [presenceMap, setPresenceMap] = useState<Record<string, { name?: string; sid?: string; [key: string]: unknown }>>({})
+
+  // Ref that FileSharePanel populates with its sendFile, so AttachmentMenu can trigger transfers
+  const sendFileRef = useRef<((file: File) => void) | null>(null)
+  const handleAttachmentFiles = useCallback((files: File[]) => {
+    files.forEach((f) => sendFileRef.current?.(f))
+  }, [])
 
   const [serverDevices, setServerDevices] = useState<Device[]>([])
 
@@ -802,10 +808,31 @@ export default function RoomPage() {
               style={S.textarea}
             />
             <div style={S.editorFooter}>
-              <span>{charCount} CHARACTERS</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Left: attachment menu + character count */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                {firebaseUidRef.current && (
+                  <AttachmentMenu
+                    onFilesSelected={handleAttachmentFiles}
+                  />
+                )}
+                <span>{charCount} CHARACTERS</span>
+              </div>
+              {/* Center: synced indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
                 <div style={{ ...S.syncedDot, backgroundColor: saved ? 'var(--cy-primary)' : 'var(--cy-warning)' }} />
                 <span style={{ textTransform: 'uppercase' }}>{saved ? 'Synced' : 'Saving…'}</span>
+              </div>
+              {/* Right: connected peers with hover popup */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flex: 1, minWidth: 0 }}>
+                <PeersIndicator
+                  people={people}
+                  userName={userName ?? ''}
+                  role={role}
+                  deviceLabel={deviceLabelRef.current}
+                  serverDevices={serverDevices}
+                  localFingerprint={fingerprintRef.current}
+                  otherDeviceNames={otherDeviceNames}
+                />
               </div>
             </div>
           </div>
@@ -832,14 +859,17 @@ export default function RoomPage() {
             </button>
           </div>
 
-          {/* File Sharing */}
+          {/* Hidden FileSharePanel — keeps WebRTC hook alive for AttachmentMenu */}
           {firebaseUidRef.current && (
-            <FileSharePanel
-              roomId={roomId}
-              localUid={firebaseUidRef.current}
-              localName={userName ?? ''}
-              presence={presenceMap}
-            />
+            <div style={{ display: 'none' }}>
+              <FileSharePanel
+                roomId={roomId}
+                localUid={firebaseUidRef.current}
+                localName={userName ?? ''}
+                presence={presenceMap}
+                sendFileRef={sendFileRef}
+              />
+            </div>
           )}
         </div>
 
@@ -952,6 +982,117 @@ export default function RoomPage() {
           </div>
         </div>
       </footer>
+    </div>
+  )
+}
+
+/* ── PeersIndicator: compact peer count with hover popover ── */
+function PeersIndicator({
+  people,
+  userName,
+  role,
+  deviceLabel,
+  serverDevices,
+  localFingerprint,
+  otherDeviceNames,
+}: {
+  people: number
+  userName: string
+  role: 'host' | 'participant'
+  deviceLabel: string
+  serverDevices: Device[]
+  localFingerprint: string
+  otherDeviceNames: string[]
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  const otherDevices = serverDevices.filter((d) => d.fingerprint !== localFingerprint)
+
+  return (
+    <div
+      style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Badge */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '2px 8px',
+          borderRadius: '2px',
+          border: '1.5px solid var(--cy-border)',
+          backgroundColor: 'var(--cy-surface-container)',
+          cursor: 'default',
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: '11px',
+          lineHeight: '14px',
+          letterSpacing: '0.04em',
+          color: 'var(--cy-text-secondary)',
+          textTransform: 'uppercase' as const,
+          whiteSpace: 'nowrap' as const,
+        }}
+      >
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)', flexShrink: 0 }} />
+        {people} Peer{people !== 1 ? 's' : ''}
+      </div>
+
+      {/* Hover popover */}
+      {hovered && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 'calc(100% + 8px)',
+            right: 0,
+            minWidth: '180px',
+            maxWidth: '260px',
+            backgroundColor: 'var(--cy-surface)',
+            border: '1.5px solid var(--cy-border)',
+            borderRadius: '4px',
+            padding: '10px 12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 30,
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '12px',
+            lineHeight: '16px',
+            color: 'var(--cy-text-secondary)',
+          }}
+        >
+          <div style={{ fontWeight: 600, fontSize: '11px', letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--cy-text)', marginBottom: '8px' }}>
+            Connected Devices
+          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {/* Local user */}
+            <li style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)', flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {userName}
+                <span style={{ color: 'var(--cy-text-muted)' }}> · {deviceLabel}</span>
+                &nbsp;<span style={{ color: 'var(--cy-text-muted)' }}>({role === 'host' ? 'HOST' : 'YOU'})</span>
+              </span>
+            </li>
+            {/* Other devices */}
+            {otherDevices.length > 0
+              ? otherDevices.map((dev, idx) => (
+                <li key={dev.sid || idx} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)', flexShrink: 0 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {dev.name || `Participant ${idx + 2}`}
+                    {dev.deviceLabel ? <span style={{ color: 'var(--cy-text-muted)' }}> · {dev.deviceLabel}</span> : null}
+                    &nbsp;<span style={{ color: 'var(--cy-text-muted)' }}>({dev.role === 'host' ? 'HOST' : 'CONNECTED'})</span>
+                  </span>
+                </li>
+              ))
+              : otherDeviceNames.map((name) => (
+                <li key={name} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)', flexShrink: 0 }} />
+                  <span>{name}&nbsp;<span style={{ color: 'var(--cy-text-muted)' }}>(CONNECTED)</span></span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
