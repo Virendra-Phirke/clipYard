@@ -94,6 +94,12 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const animFrameRef = useRef<number>(0)
 
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null)
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const startTimeRef = useRef<number>(0)
+  const pausedAtRef = useRef<number>(0)
+
   // 1. Fetch, decode, and compute peaks
   useEffect(() => {
     let active = true
@@ -110,10 +116,12 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
         }
         if (!active) return
         const ctx = getAudioContext()
-        const audioBuffer = await ctx.decodeAudioData(arrayBuffer)
+        audioCtxRef.current = ctx
+        const decodedBuffer = await ctx.decodeAudioData(arrayBuffer)
         if (!active) return
-        setDuration(audioBuffer.duration)
-        setPeaks(computePeaks(audioBuffer, 80))
+        setAudioBuffer(decodedBuffer)
+        setDuration(decodedBuffer.duration)
+        setPeaks(computePeaks(decodedBuffer, 80))
         setLoading(false)
       } catch (err) {
         console.warn('Failed to decode audio for waveform preview:', err)
@@ -126,48 +134,36 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
     }
   }, [url])
 
-  const [audioUrl, setAudioUrl] = useState(url)
-
-  // 2. Manage audio URL lifecycle
+  // Cleanup on unmount
   useEffect(() => {
-    if (blob) {
-      let b = blob
-      if (!b.type || b.type === 'application/octet-stream') {
-        const extMatch = fileName.split('.').pop()?.toLowerCase() || ''
-        let mime = 'audio/webm'
-        if (extMatch === 'mp3') mime = 'audio/mpeg'
-        else if (extMatch === 'wav') mime = 'audio/wav'
-        else if (extMatch === 'ogg') mime = 'audio/ogg'
-        else if (extMatch === 'm4a' || extMatch === 'mp4') mime = 'audio/mp4'
-        else if (extMatch === 'aac') mime = 'audio/aac'
-        
-        b = new Blob([blob], { type: mime })
+    return () => {
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.onended = null
+        try { sourceNodeRef.current.stop() } catch (e) {}
+        try { sourceNodeRef.current.disconnect() } catch (e) {}
+        sourceNodeRef.current = null
       }
-      const u = URL.createObjectURL(b)
-      setAudioUrl(u)
-      return () => URL.revokeObjectURL(u)
-    } else {
-      setAudioUrl(url)
+      cancelAnimationFrame(animFrameRef.current)
     }
-  }, [url, blob, fileName])
+  }, [])
 
   // 3. RAF loop for waveform progress
   useEffect(() => {
-    if (!peaks) return
-    if (!isPlaying) return
+    if (!peaks || !isPlaying || !audioCtxRef.current || !audioBuffer) return
     function tick() {
-      const audio = audioRef.current
       const canvas = canvasRef.current
-      if (audio && canvas && peaks) {
-        setAudioCurrentTime(audio.currentTime)
-        const progress = audio.duration ? audio.currentTime / audio.duration : 0
+      if (canvas && peaks && audioCtxRef.current && audioBuffer) {
+        const elapsed = audioCtxRef.current.currentTime - startTimeRef.current
+        const current = pausedAtRef.current + elapsed
+        setAudioCurrentTime(current)
+        const progress = audioBuffer.duration ? current / audioBuffer.duration : 0
         drawWaveform(canvas, peaks as number[], progress, getWaveformColors())
       }
       animFrameRef.current = requestAnimationFrame(tick)
     }
     animFrameRef.current = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(animFrameRef.current)
-  }, [isPlaying, peaks])
+  }, [isPlaying, peaks, audioBuffer])
 
   // 4. Draw initial waveform when data loads
   useEffect(() => {
@@ -181,47 +177,90 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
   }, [peaks])
 
   const togglePlay = useCallback(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    if (audio.paused) {
-      audio.play().catch(console.error)
+    if (!audioBuffer || !audioCtxRef.current) return
+
+    if (isPlaying) {
+      // Pause
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.onended = null
+        try { sourceNodeRef.current.stop() } catch (e) {}
+        try { sourceNodeRef.current.disconnect() } catch (e) {}
+        sourceNodeRef.current = null
+      }
+      pausedAtRef.current += audioCtxRef.current.currentTime - startTimeRef.current
+      setIsPlaying(false)
     } else {
-      audio.pause()
+      // Play
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(console.error)
+      }
+      const source = audioCtxRef.current.createBufferSource()
+      source.buffer = audioBuffer
+      source.connect(audioCtxRef.current.destination)
+      
+      if (pausedAtRef.current >= audioBuffer.duration) {
+        pausedAtRef.current = 0
+      }
+      
+      source.start(0, pausedAtRef.current)
+      startTimeRef.current = audioCtxRef.current.currentTime
+      sourceNodeRef.current = source
+      
+      source.onended = () => {
+        if (sourceNodeRef.current === source) {
+          setIsPlaying(false)
+          pausedAtRef.current = 0
+          setAudioCurrentTime(0)
+          sourceNodeRef.current = null
+        }
+      }
+      setIsPlaying(true)
     }
-  }, [])
+  }, [audioBuffer, isPlaying])
 
   const seekWaveform = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      const audio = audioRef.current
-      if (!audio || !audio.duration) return
+      if (!audioBuffer || !audioCtxRef.current) return
       const rect = e.currentTarget.getBoundingClientRect()
       const fraction = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
-      audio.currentTime = fraction * audio.duration
+      const newTime = fraction * audioBuffer.duration
+      
+      pausedAtRef.current = newTime
+      setAudioCurrentTime(newTime)
+      
+      if (isPlaying) {
+        if (sourceNodeRef.current) {
+          sourceNodeRef.current.onended = null
+          try { sourceNodeRef.current.stop() } catch (e) {}
+          try { sourceNodeRef.current.disconnect() } catch (e) {}
+        }
+        const source = audioCtxRef.current.createBufferSource()
+        source.buffer = audioBuffer
+        source.connect(audioCtxRef.current.destination)
+        source.start(0, newTime)
+        startTimeRef.current = audioCtxRef.current.currentTime
+        sourceNodeRef.current = source
+        source.onended = () => {
+          if (sourceNodeRef.current === source) {
+            setIsPlaying(false)
+            pausedAtRef.current = 0
+            setAudioCurrentTime(0)
+            sourceNodeRef.current = null
+          }
+        }
+      }
       
       // Update canvas immediately
       const canvas = canvasRef.current
       if (canvas && peaks !== null) {
-        setAudioCurrentTime(audio.currentTime)
         drawWaveform(canvas, peaks, fraction, getWaveformColors())
       }
     },
-    [peaks],
+    [audioBuffer, isPlaying, peaks],
   )
 
   return (
     <div style={style.container}>
-      <audio
-        ref={audioRef}
-        src={audioUrl}
-        preload="metadata"
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => {
-          setIsPlaying(false)
-          setAudioCurrentTime(0)
-        }}
-        style={{ display: 'none' }}
-      />
       <div style={style.topBar}>
         <button
           style={style.topBtn}
