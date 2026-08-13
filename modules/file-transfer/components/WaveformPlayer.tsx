@@ -126,37 +126,16 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
     }
   }, [url])
 
-  // 2. Setup standard HTMLAudioElement for actual playback
+  const [audioUrl, setAudioUrl] = useState(url)
+
+  // 2. Manage audio URL lifecycle
   useEffect(() => {
-    let audioUrl = url
     if (blob) {
-      audioUrl = URL.createObjectURL(blob)
-    }
-    
-    const audio = new Audio(audioUrl)
-    audio.preload = 'metadata'
-    audioRef.current = audio
-
-    const onPlay = () => setIsPlaying(true)
-    const onPause = () => setIsPlaying(false)
-    const onEnded = () => {
-      setIsPlaying(false)
-      setAudioCurrentTime(0)
-    }
-    audio.addEventListener('play', onPlay)
-    audio.addEventListener('pause', onPause)
-    audio.addEventListener('ended', onEnded)
-
-    return () => {
-      audio.pause()
-      audio.removeEventListener('play', onPlay)
-      audio.removeEventListener('pause', onPause)
-      audio.removeEventListener('ended', onEnded)
-      audioRef.current = null
-      cancelAnimationFrame(animFrameRef.current)
-      if (blob) {
-        URL.revokeObjectURL(audioUrl)
-      }
+      const u = URL.createObjectURL(blob)
+      setAudioUrl(u)
+      return () => URL.revokeObjectURL(u)
+    } else {
+      setAudioUrl(url)
     }
   }, [url, blob])
 
@@ -193,7 +172,7 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
     const audio = audioRef.current
     if (!audio) return
     if (audio.paused) {
-      audio.play().catch(() => {})
+      audio.play().catch(console.error)
     } else {
       audio.pause()
     }
@@ -219,6 +198,18 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
 
   return (
     <div style={style.container}>
+      <audio
+        ref={audioRef}
+        src={audioUrl}
+        preload="metadata"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => {
+          setIsPlaying(false)
+          setAudioCurrentTime(0)
+        }}
+        style={{ display: 'none' }}
+      />
       <div style={style.topBar}>
         <button
           style={style.topBtn}
