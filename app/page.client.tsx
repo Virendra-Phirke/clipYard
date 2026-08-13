@@ -223,19 +223,12 @@ export default function HomePageClient() {
           </p>
 
           {/* CTA Row */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "16px",
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-4 justify-center items-center w-full max-w-sm sm:max-w-none mx-auto">
             <button
               id="create-clipboard-btn"
               onClick={createRoom}
               disabled={loading}
+              className="w-full sm:w-auto flex items-center justify-center"
               style={{
                 backgroundColor: "var(--cy-primary)",
                 color: "var(--cy-on-primary)",
@@ -273,105 +266,104 @@ export default function HomePageClient() {
             </span>
 
             {/* Join Module */}
-            <form
-              onSubmit={joinRoom}
-              style={{
-                backgroundColor: "var(--cy-surface-white)",
-                border: "1.5px solid var(--cy-border)",
-                borderRadius: "4px",
-                padding: "8px",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <span
+            <div className="flex flex-row items-stretch gap-2 w-full sm:w-auto">
+              <form
+                onSubmit={joinRoom}
+                className="flex-grow flex items-center"
                 style={{
-                  fontFamily: "JetBrains Mono, monospace",
-                  fontSize: "14px",
-                  lineHeight: "20px",
-                  letterSpacing: "0.02em",
-                  fontWeight: 500,
-                  color: "var(--cy-text-secondary)",
-                  padding: "0 12px",
-                  borderRight: "1px solid var(--cy-border)",
-                  marginRight: "8px",
-                  whiteSpace: "nowrap",
+                  backgroundColor: "var(--cy-surface-white)",
+                  border: "1.5px solid var(--cy-border)",
+                  borderRadius: "4px",
+                  padding: "8px",
                 }}
               >
-                JOIN EXISTING
-              </span>
-              <input
-                id="room-code-input"
-                value={roomId}
-                onChange={(e) => {
-                  setRoomId(e.target.value);
-                  setError("");
-                }}
-                placeholder="Room code"
-                maxLength={8}
-                style={{
-                  fontFamily: "JetBrains Mono, monospace",
-                  fontSize: "13px",
-                  lineHeight: "18px",
-                  backgroundColor: "transparent",
-                  border: "none",
-                  padding: "8px",
-                  width: "128px",
-                  color: "var(--cy-text)",
-                  outline: "none",
-                }}
-              />
+                <span
+                  style={{
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontSize: "14px",
+                    lineHeight: "20px",
+                    letterSpacing: "0.02em",
+                    fontWeight: 500,
+                    color: "var(--cy-text-secondary)",
+                    padding: "0 12px",
+                    borderRight: "1px solid var(--cy-border)",
+                    marginRight: "8px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  JOIN EXISTING
+                </span>
+                <input
+                  id="room-code-input"
+                  value={roomId}
+                  onChange={(e) => {
+                    setRoomId(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="Room code"
+                  maxLength={8}
+                  style={{
+                    fontFamily: "JetBrains Mono, monospace",
+                    fontSize: "13px",
+                    lineHeight: "18px",
+                    backgroundColor: "transparent",
+                    border: "none",
+                    padding: "8px",
+                    width: "100%",
+                    minWidth: "0",
+                    color: "var(--cy-text)",
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{
+                    backgroundColor: "var(--cy-primary-text)",
+                    color: "var(--cy-surface-white)",
+                    fontFamily: "Hanken Grotesk, sans-serif",
+                    fontSize: "14px",
+                    lineHeight: "20px",
+                    fontWeight: 600,
+                    padding: "8px 16px",
+                    borderRadius: "2px",
+                    border: "none",
+                    cursor: "pointer",
+                    transition: "opacity 0.2s ease",
+                  }}
+                  onMouseEnter={(e) =>
+                    ((e.currentTarget as HTMLElement).style.opacity = "0.9")
+                  }
+                  onMouseLeave={(e) =>
+                    ((e.currentTarget as HTMLElement).style.opacity = "1")
+                  }
+                >
+                  Join
+                </button>
+              </form>
+
               <button
-                type="submit"
+                className="flex sm:hidden items-center justify-center flex-shrink-0"
+                onClick={() => setScannerOpen(true)}
+                title="Scan QR Code"
                 style={{
-                  backgroundColor: "var(--cy-primary-text)",
-                  color: "var(--cy-surface-white)",
-                  fontFamily: "Hanken Grotesk, sans-serif",
-                  fontSize: "14px",
-                  lineHeight: "20px",
-                  fontWeight: 600,
-                  padding: "8px 16px",
-                  borderRadius: "2px",
-                  border: "none",
+                  width: "52px",
+                  backgroundColor: "var(--cy-surface)",
+                  border: "1.5px solid var(--cy-border)",
+                  borderRadius: "4px",
+                  color: "var(--cy-text)",
                   cursor: "pointer",
-                  transition: "opacity 0.2s ease",
+                  transition: "background-color 0.2s ease",
                 }}
                 onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLElement).style.opacity = "0.9")
+                  ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--cy-surface-container)")
                 }
                 onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLElement).style.opacity = "1")
+                  ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--cy-surface)")
                 }
               >
-                Join
+                <QrCode size={20} />
               </button>
-            </form>
-
-            <button
-              onClick={() => setScannerOpen(true)}
-              title="Scan QR Code"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "44px",
-                height: "44px",
-                backgroundColor: "var(--cy-surface)",
-                border: "1.5px solid var(--cy-border)",
-                borderRadius: "4px",
-                color: "var(--cy-text)",
-                cursor: "pointer",
-                transition: "background-color 0.2s ease",
-              }}
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--cy-surface-container)")
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.backgroundColor = "var(--cy-surface)")
-              }
-            >
-              <QrCode size={20} />
-            </button>
+            </div>
           </div>
 
           {error && (
@@ -732,6 +724,7 @@ export default function HomePageClient() {
           </div>
         </div>
       </footer>
+      <QRScannerModal open={scannerOpen} onOpenChange={setScannerOpen} onResult={handleScanResult} />
     </>
   );
 }
