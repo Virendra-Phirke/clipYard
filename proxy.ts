@@ -141,7 +141,7 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
 
 // ─── Middleware entry point ───────────────────────────────────────────────────
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   maybePrune()
 
   const { pathname } = request.nextUrl
