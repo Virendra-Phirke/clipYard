@@ -655,7 +655,7 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
           <DropdownMenuContent side="top" sideOffset={8} align="start">
             <DropdownMenuItem
               id="attach-photos"
-              onSelect={() => photosInputRef.current?.click()}
+              onSelect={() => setTimeout(() => photosInputRef.current?.click(), 10)}
             >
               <ImageIcon size={16} className="text-muted-foreground" />
               Photos &amp; videos
@@ -666,7 +666,7 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
                 if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
                   openCamera()
                 } else {
-                  photosInputRef.current?.click()
+                  setTimeout(() => photosInputRef.current?.click(), 10)
                 }
               }}
             >
@@ -676,14 +676,14 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
             <DropdownMenuSeparator />
             <DropdownMenuItem
               id="attach-audio"
-              onSelect={() => audioInputRef.current?.click()}
+              onSelect={() => setTimeout(() => audioInputRef.current?.click(), 10)}
             >
               <Music size={16} className="text-muted-foreground" />
               Audio
             </DropdownMenuItem>
             <DropdownMenuItem
               id="attach-document"
-              onSelect={() => docInputRef.current?.click()}
+              onSelect={() => setTimeout(() => docInputRef.current?.click(), 10)}
             >
               <FileText size={16} className="text-muted-foreground" />
               Document
