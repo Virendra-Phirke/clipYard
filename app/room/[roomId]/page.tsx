@@ -1007,6 +1007,7 @@ function PeersIndicator({
   const [hovered, setHovered] = useState(false)
 
   const otherDevices = serverDevices.filter((d) => d.fingerprint !== localFingerprint)
+  const otherCount = Math.max(0, people - 1)
 
   return (
     <div
@@ -1034,8 +1035,10 @@ function PeersIndicator({
           whiteSpace: 'nowrap' as const,
         }}
       >
-        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)', flexShrink: 0 }} />
-        {people} Peer{people !== 1 ? 's' : ''}
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: otherCount > 0 ? 'var(--cy-primary)' : 'var(--cy-text-muted)', flexShrink: 0 }} />
+        {otherCount > 0
+          ? `${otherCount} Connected`
+          : 'No peers'}
       </div>
 
       {/* Hover popover */}
