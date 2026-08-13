@@ -859,18 +859,7 @@ export default function RoomPage() {
             </button>
           </div>
 
-          {/* Hidden FileSharePanel — keeps WebRTC hook alive for AttachmentMenu */}
-          {firebaseUidRef.current && (
-            <div style={{ display: 'none' }}>
-              <FileSharePanel
-                roomId={roomId}
-                localUid={firebaseUidRef.current}
-                localName={userName ?? ''}
-                presence={presenceMap}
-                sendFileRef={sendFileRef}
-              />
-            </div>
-          )}
+          {/* The FileSharePanel was moved to the sidebar */}
         </div>
 
         {/* Sidebar — 4 cols on desktop, full on mobile */}
@@ -959,6 +948,17 @@ export default function RoomPage() {
               </div> */}
             </div>
           </div>
+
+          {/* Shared Files (replaces the hidden one) */}
+          {firebaseUidRef.current && (
+            <FileSharePanel
+              roomId={roomId}
+              localUid={firebaseUidRef.current}
+              localName={userName ?? ''}
+              presence={presenceMap}
+              sendFileRef={sendFileRef}
+            />
+          )}
 
         </div>
       </main>

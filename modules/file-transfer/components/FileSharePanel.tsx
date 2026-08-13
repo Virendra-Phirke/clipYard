@@ -1,41 +1,30 @@
 'use client'
 
-import { useCallback, useEffect, useState, type CSSProperties, type MutableRefObject } from 'react'
+import { useState, type CSSProperties, type MutableRefObject } from 'react'
 import { useFileTransfer } from '../hooks/useFileTransfer'
-import { FileUploader } from './FileUploader'
-import { FilePreview } from './FilePreview'
-import { FileTransferCard } from './FileTransferCard'
-import { ReceivedFileCard } from './ReceivedFileCard'
 import { FileModal } from './FileModal'
+import { FileText, Music, Play, AlertCircle } from 'lucide-react'
 import type { Transfer } from '@/lib/webrtc/types'
-import { FILE_TRANSFER_CONFIG } from '@/lib/webrtc/config'
 
-/**
- * Props for the FileSharePanel component.
- */
 interface FileSharePanelProps {
   roomId: string
   localUid: string
   localName: string
   presence: Record<string, { name?: string; sid?: string; [key: string]: unknown }>
-  /** Optional ref that will be populated with the internal sendFile function,
-   *  so external UI (e.g. AttachmentMenu) can trigger file transfers. */
   sendFileRef?: MutableRefObject<((file: File) => void) | null>
 }
 
-const S: Record<string, CSSProperties> = {
-  section: {
+const style: Record<string, CSSProperties> = {
+  card: {
+    backgroundColor: 'var(--cy-surface)',
+    border: '1.5px solid var(--cy-border)',
+    borderRadius: '4px',
+    padding: '16px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
-  },
-  sectionHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     gap: '12px',
   },
-  title: {
+  cardTitle: {
     fontFamily: 'JetBrains Mono, monospace',
     fontSize: '14px',
     lineHeight: '20px',
@@ -47,271 +36,146 @@ const S: Record<string, CSSProperties> = {
     alignItems: 'center',
     gap: '8px',
   },
-  statusBadge: {
-    display: 'inline-flex',
+  row: {
+    display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '11px',
-    lineHeight: '14px',
-    letterSpacing: '0.04em',
-    padding: '3px 10px',
-    borderRadius: '2px',
+    gap: '8px',
+    flexWrap: 'wrap',
+  },
+  imageSlot: {
+    position: 'relative',
+    width: '32px',
+    height: '32px',
+    borderRadius: '4px',
+    border: '1.5px solid var(--cy-border)',
+    overflow: 'hidden',
+    backgroundColor: 'var(--cy-surface-container)',
+    cursor: 'pointer',
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    display: 'block',
+  },
+  iconSlot: {
+    position: 'relative',
+    width: '32px',
+    height: '32px',
+    borderRadius: '4px',
     border: '1.5px solid var(--cy-border)',
     backgroundColor: 'var(--cy-surface-container)',
-    color: 'var(--cy-text-secondary)',
-    textTransform: 'uppercase',
-  },
-  dot: {
-    width: '6px',
-    height: '6px',
-    borderRadius: '50%',
+    cursor: 'pointer',
     flexShrink: 0,
-  },
-  unsupported: {
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '13px',
-    lineHeight: '18px',
-    color: 'var(--cy-text-secondary)',
-    textAlign: 'center',
-    padding: '24px 16px',
-    backgroundColor: 'var(--cy-surface)',
-    border: '1.5px solid var(--cy-border)',
-    borderRadius: '4px',
-  },
-  transfersSection: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--cy-text-secondary)',
   },
-  subTitle: {
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '11px',
-    lineHeight: '14px',
-    letterSpacing: '0.08em',
-    fontWeight: 500,
-    color: 'var(--cy-text-muted)',
-    textTransform: 'uppercase',
-  },
-  receivedGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-    gap: '12px',
-  },
-  error: {
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '12px',
-    lineHeight: '16px',
-    color: 'var(--cy-error)',
-    padding: '8px 12px',
-    backgroundColor: 'var(--cy-surface)',
-    border: '1.5px solid var(--cy-error)',
-    borderRadius: '4px',
-  },
-  previewGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-    gap: '12px',
+  progressOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    height: '4px',
+    backgroundColor: 'var(--cy-primary)',
+    transition: 'width 0.2s',
   },
 }
 
-export const FileSharePanel = ({
+export function FileSharePanel({
   roomId,
   localUid,
   localName,
   presence,
   sendFileRef,
-}: FileSharePanelProps) => {
+}: FileSharePanelProps) {
   const {
     transfers,
-    peers,
     isSupported,
     sendFile,
-    cancelTransfer,
-    downloadFile,
-    connectedPeerCount,
   } = useFileTransfer({
     roomId,
     localUid,
     localName,
     presence,
-    enabled: true,
   })
 
-  // Expose sendFile to the parent via the ref so external UI can trigger transfers
-  useEffect(() => {
-    if (sendFileRef) sendFileRef.current = sendFile
-    return () => { if (sendFileRef) sendFileRef.current = null }
-  }, [sendFile, sendFileRef])
-
-  const handleFileSelected = useCallback((file: File) => {
-    sendFile(file)
-  }, [sendFile])
-
-  const [viewingFile, setViewingFile] = useState<Transfer | null>(null)
-
-  const handleCancelBatch = useCallback((batchId: string) => {
-    transfers.filter((t) => t.batchId === batchId || t.id === batchId).forEach((t) => {
-      cancelTransfer(t.id)
-    })
-  }, [transfers, cancelTransfer])
-
-  // Categorize transfers
-  const activeTransfers = transfers.filter(
-    (t) => t.status === 'transferring' || t.status === 'pending',
-  )
-  const completedReceived = transfers.filter(
-    (t) => t.status === 'completed' && t.direction === 'received',
-  )
-  const failedTransfers = transfers.filter((t) => t.status === 'failed')
-  
-  // Aggregate completed sent transfers by batchId so the summary count is accurate
-  const completedSent = transfers.filter(
-    (t) => t.status === 'completed' && t.direction === 'sent',
-  )
-  const uniqueCompletedSentBatches = new Set(
-    completedSent.map((t) => t.batchId || t.id)
-  )
-
-  // Group active sent transfers by batchId
-  const activeSentGroups = new Map<string, Transfer[]>()
-  const activeReceived: Transfer[] = []
-  
-  for (const t of activeTransfers) {
-    if (t.direction === 'sent') {
-      const bId = t.batchId || t.id
-      const group = activeSentGroups.get(bId) || []
-      group.push(t)
-      activeSentGroups.set(bId, group)
-    } else {
-      activeReceived.push(t)
-    }
+  // Wire up the ref so AttachmentMenu can trigger sends
+  if (sendFileRef) {
+    sendFileRef.current = sendFile
   }
 
-  // Create aggregated transfers for rendering
-  const aggregatedActiveTransfers = [
-    ...activeReceived,
-    ...Array.from(activeSentGroups.values()).map(group => {
-      // Calculate aggregate progress
-      const totalProgress = group.reduce((sum, t) => sum + t.progress, 0)
-      const avgProgress = Math.round(totalProgress / group.length)
-      
-      // Calculate max eta and sum speed
-      const totalSpeed = group.reduce((sum, t) => sum + (t.speed || 0), 0)
-      const maxEta = Math.max(...group.map(t => t.eta || 0), 0)
+  const [viewingFile, setViewingFile] = useState<(Transfer & { objectUrl: string }) | null>(null)
 
-      return {
-        ...group[0],
-        id: group[0].batchId || group[0].id, 
-        progress: avgProgress,
-        speed: totalSpeed > 0 ? totalSpeed : undefined,
-        eta: maxEta > 0 ? maxEta : undefined,
-        peerName: `Everyone (${group.length})`,
-      }
-    })
-  ]
+  if (!isSupported) return null
 
-  // Connection status
-  const hasAnyPeer = peers.length > 0
-  const statusColor = connectedPeerCount > 0
-    ? 'var(--cy-primary)'
-    : hasAnyPeer
-      ? 'var(--cy-warning)'
-      : 'var(--cy-text-muted)'
-  const statusLabel = connectedPeerCount > 0
-    ? `P2P Connected (${connectedPeerCount})`
-    : hasAnyPeer
-      ? 'Connecting…'
-      : 'Waiting for peers'
+  // All shared files (received and active). Sent files without blobs aren't previewable directly.
+  const receivedFiles = transfers.filter((t) => t.status === 'completed' && t.direction === 'received' && (t as any).objectUrl) as (Transfer & { objectUrl: string })[]
+  const activeTransfers = transfers.filter((t) => t.status === 'transferring' || t.status === 'pending' || t.status === 'failed')
 
-  if (!isSupported) {
-    return (
-      <div style={S.section}>
-        <div style={S.title}>
-          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--cy-text-secondary)' }}>
-            folder_zip
-          </span>
-          File Sharing
-        </div>
-        <div style={S.unsupported}>
-          Your browser does not support peer-to-peer file sharing.
-        </div>
-      </div>
-    )
+  if (receivedFiles.length === 0 && activeTransfers.length === 0) {
+    return null
   }
 
   return (
-    <div style={S.section}>
-      {/* Header */}
-      <div style={S.sectionHeader}>
-        <div style={S.title}>
-          <span className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--cy-text-secondary)' }}>
-            folder_zip
-          </span>
-          File Sharing
-        </div>
-        <div style={S.statusBadge}>
-          <div style={{ ...S.dot, backgroundColor: statusColor }} />
-          {statusLabel}
-        </div>
+    <div style={style.card}>
+      <h3 style={style.cardTitle}>
+        <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)' }}>folder_zip</span>
+        Shared Files
+      </h3>
+
+      <div style={style.row}>
+        {/* Render received files */}
+        {receivedFiles.map((f, i) => {
+          const isImage = f.mimeType.startsWith('image/')
+          const isVideo = f.mimeType.startsWith('video/')
+          const isAudio = f.mimeType.startsWith('audio/')
+          
+          if (isImage) {
+            return (
+              <div key={f.id || i} style={style.imageSlot} onClick={() => setViewingFile(f)} title={f.fileName}>
+                <img src={f.objectUrl} alt={f.fileName} style={style.slotImg} />
+              </div>
+            )
+          }
+          
+          if (isVideo) {
+            return (
+              <div key={f.id || i} style={style.iconSlot} onClick={() => setViewingFile(f)} title={f.fileName}>
+                <Play size={16} />
+              </div>
+            )
+          }
+          
+          if (isAudio) {
+            return (
+              <div key={f.id || i} style={style.iconSlot} onClick={() => setViewingFile(f)} title={f.fileName}>
+                <Music size={16} />
+              </div>
+            )
+          }
+
+          return (
+            <div key={f.id || i} style={style.iconSlot} onClick={() => setViewingFile(f)} title={f.fileName}>
+              <FileText size={16} />
+            </div>
+          )
+        })}
+
+        {/* Render active transfers */}
+        {activeTransfers.map((t, i) => (
+          <div key={t.id || i} style={style.iconSlot} title={`Receiving ${t.fileName}...`}>
+            {t.status === 'failed' ? <AlertCircle size={16} color="var(--cy-warning)" /> : <span className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--cy-text-secondary)', animation: 'pulse 2s infinite' }}>download</span>}
+            {t.status === 'transferring' && (
+              <div style={{ ...style.progressOverlay, width: `${t.progress}%` }} />
+            )}
+          </div>
+        ))}
       </div>
-
-      {/* Uploader */}
-      <FileUploader
-        onFileSelected={handleFileSelected}
-      />
-
-      {/* Active transfers */}
-      {aggregatedActiveTransfers.length > 0 && (
-        <div style={S.transfersSection}>
-          <div style={S.subTitle}>Active Transfers</div>
-          {aggregatedActiveTransfers.map((t) => (
-            <FileTransferCard
-              key={t.id}
-              transfer={t}
-              onCancel={t.direction === 'sent' ? handleCancelBatch : cancelTransfer}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Failed transfers */}
-      {failedTransfers.length > 0 && (
-        <div style={S.transfersSection}>
-          {failedTransfers.map((t) => (
-            <FileTransferCard
-              key={t.id}
-              transfer={t}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Received files */}
-      {completedReceived.length > 0 && (
-        <div style={S.transfersSection}>
-          <div style={S.subTitle}>Received Files</div>
-          <div style={S.receivedGrid}>
-            {completedReceived.map((t) => (
-              <ReceivedFileCard
-                key={t.id}
-                transfer={t}
-                onDownload={downloadFile}
-                onView={setViewingFile}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Sent summary */}
-      {uniqueCompletedSentBatches.size > 0 && (
-        <div style={S.transfersSection}>
-          <div style={S.subTitle}>
-            {uniqueCompletedSentBatches.size} file{uniqueCompletedSentBatches.size !== 1 ? 's' : ''} sent
-          </div>
-        </div>
-      )}
 
       {/* Full screen modal */}
       {viewingFile && viewingFile.objectUrl && (
