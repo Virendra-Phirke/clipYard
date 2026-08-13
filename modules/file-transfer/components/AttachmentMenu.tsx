@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type RefObject,
 } from 'react'
 import {
   DropdownMenu,
@@ -23,18 +22,10 @@ import {
 import {
   ImageIcon,
   Camera,
-  Music,
   FileText,
   Plus,
   SwitchCamera,
-  Download,
-  X,
 } from 'lucide-react'
-import {
-  getAudioContext,
-  computePeaks,
-} from '@/lib/webrtc/audioUtils'
-import { WaveformPlayer } from './WaveformPlayer'
 
 /* ────────────────────────────── Types ────────────────────────────── */
 
@@ -43,37 +34,6 @@ interface AttachmentMenuProps {
   onFilesSelected: (files: File[]) => void
   disabled?: boolean
 }
-
-interface ImageAttachment {
-  type: 'image'
-  dataUrl: string
-  fileName: string
-  file: File
-}
-
-interface AudioAttachment {
-  type: 'audio'
-  objectUrl: string
-  fileName: string
-  file: File
-  duration: number
-  peaksSmall: number[]
-  peaksLarge: number[]
-}
-
-interface DocumentAttachment {
-  type: 'document'
-  objectUrl: string
-  fileName: string
-  ext: string
-  file: File
-}
-
-type Attachment = ImageAttachment | AudioAttachment | DocumentAttachment
-
-/* ─────────────────────── Canvas / Waveform Utils ─────────────────────── */
-
-const MAX_ATTACHMENTS = 5
 
 /* ─────────────────────────── Inline Styles ─────────────────────────── */
 
@@ -239,7 +199,6 @@ const style: Record<string, CSSProperties> = {
 /* ═══════════════════════════ COMPONENT ═══════════════════════════ */
 
 export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProps) {
-  const [attachments, setAttachments] = useState<Attachment[]>([])
   const photosInputRef = useRef<HTMLInputElement>(null)
   const audioInputRef = useRef<HTMLInputElement>(null)
   const docInputRef = useRef<HTMLInputElement>(null)
@@ -254,98 +213,40 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
   const [hasMultipleCameras, setHasMultipleCameras] = useState(false)
   const captureCanvasRef = useRef<HTMLCanvasElement>(null)
 
-  /* Image preview dialog */
-  const [previewImage, setPreviewImage] = useState<ImageAttachment | null>(null)
-
-  /* Audio player state */
-  const [playingAudio, setPlayingAudio] = useState<AudioAttachment | null>(null)
-
-  /* ── file inputs ── */
-  const addAttachment = useCallback(
-    (att: Attachment) => {
-      setAttachments((prev) => {
-        if (prev.length >= MAX_ATTACHMENTS) return prev
-        return [...prev, att]
-      })
-      onFilesSelected([att.file])
-    },
-    [onFilesSelected],
-  )
-
-  const removeAttachment = useCallback((index: number) => {
-    setAttachments((prev) => {
-      const copy = [...prev]
-      const removed = copy.splice(index, 1)[0]
-      if (removed && 'objectUrl' in removed) URL.revokeObjectURL(removed.objectUrl)
-      return copy
-    })
-  }, [])
-
   /* Photos & videos */
   const handlePhotos = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || [])
-      files.forEach((file) => {
-        const reader = new FileReader()
-        reader.onload = (ev) => {
-          addAttachment({
-            type: 'image',
-            dataUrl: ev.target?.result as string,
-            fileName: file.name,
-            file,
-          })
-        }
-        reader.readAsDataURL(file)
-      })
+      if (files.length > 0) {
+        onFilesSelected(files)
+      }
       if (photosInputRef.current) photosInputRef.current.value = ''
     },
-    [addAttachment],
+    [onFilesSelected],
   )
 
   /* Audio */
   const handleAudio = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || [])
-      for (const file of files) {
-        try {
-          const arrayBuffer = await file.arrayBuffer()
-          const ctx = getAudioContext()
-          const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0))
-          addAttachment({
-            type: 'audio',
-            objectUrl: URL.createObjectURL(file),
-            fileName: file.name,
-            file,
-            duration: audioBuffer.duration,
-            peaksSmall: computePeaks(audioBuffer, 20),
-            peaksLarge: computePeaks(audioBuffer, 80),
-          })
-        } catch {
-          // Skip files that can't be decoded
-        }
+      if (files.length > 0) {
+        onFilesSelected(files)
       }
       if (audioInputRef.current) audioInputRef.current.value = ''
     },
-    [addAttachment],
+    [onFilesSelected],
   )
 
   /* Documents */
   const handleDocument = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || [])
-      files.forEach((file) => {
-        const ext = (file.name.split('.').pop() || 'file').slice(0, 4)
-        addAttachment({
-          type: 'document',
-          objectUrl: URL.createObjectURL(file),
-          fileName: file.name,
-          ext,
-          file,
-        })
-      })
+      if (files.length > 0) {
+        onFilesSelected(files)
+      }
       if (docInputRef.current) docInputRef.current.value = ''
     },
-    [addAttachment],
+    [onFilesSelected],
   )
 
   /* ── Camera ── */
@@ -425,34 +326,21 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
     canvas.toBlob((blob) => {
       if (!blob) return
       const file = new File([blob], `photo-${Date.now()}.png`, { type: 'image/png' })
-      const dataUrl = canvas.toDataURL('image/png')
-      addAttachment({ type: 'image', dataUrl, fileName: file.name, file })
+      onFilesSelected([file])
       setCameraOpen(false)
     }, 'image/png')
-  }, [facingMode, addAttachment])
-
-  const downloadAttachment = useCallback((att: Attachment) => {
-    const url = att.type === 'image' ? att.dataUrl : att.objectUrl
-    const link = document.createElement('a')
-    link.href = url
-    link.download = att.fileName
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-  }, [])
-
-  const isFull = attachments.length >= MAX_ATTACHMENTS
+  }, [facingMode, onFilesSelected])
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center' }}>
         <DropdownMenu>
           <DropdownMenuTrigger
-            disabled={disabled || isFull}
+            disabled={disabled}
             style={{
               ...style.triggerBtn,
-              opacity: disabled || isFull ? 0.4 : 1,
-              cursor: disabled || isFull ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.4 : 1,
+              cursor: disabled ? 'not-allowed' : 'pointer',
             }}
             aria-label="Attach file"
             id="attachment-menu-trigger"
@@ -472,7 +360,6 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
                 if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
                   openCamera()
                 } else {
-                  // Fallback: don't close the menu, let the user click the photos option
                   photosInputRef.current?.click()
                 }
               }}
@@ -481,12 +368,6 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
               Camera
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem style={{ padding: 0 }}>
-              <label htmlFor="attach-audio" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer', padding: '0.25rem 0.375rem' }}>
-                <Music size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
-                Audio
-              </label>
-            </DropdownMenuItem>
             <DropdownMenuItem style={{ padding: 0 }}>
               <label htmlFor="attach-document" style={{ display: 'flex', alignItems: 'center', width: '100%', cursor: 'pointer', padding: '0.25rem 0.375rem' }}>
                 <FileText size={16} className="text-muted-foreground" style={{ marginRight: '8px' }} />
@@ -507,15 +388,6 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
           onChange={handlePhotos}
         />
         <input
-          id="attach-audio"
-          ref={audioInputRef}
-          type="file"
-          accept="audio/*"
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleAudio}
-        />
-        <input
           id="attach-document"
           ref={docInputRef}
           type="file"
@@ -524,84 +396,6 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
           style={{ display: 'none' }}
           onChange={handleDocument}
         />
-
-        {/* Thumbnail row */}
-        {attachments.length > 0 && (
-          <div style={style.row}>
-            {attachments.map((att, i) => {
-              if (att.type === 'image') {
-                return (
-                  <div
-                    key={`img-${i}`}
-                    style={style.imageSlot}
-                    onClick={() => setPreviewImage(att)}
-                    title={att.fileName}
-                  >
-                    <img
-                      src={att.dataUrl}
-                      alt={att.fileName}
-                      style={style.slotImg}
-                    />
-                    <button
-                      style={style.removeBtn as CSSProperties}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeAttachment(i)
-                      }}
-                      aria-label="Remove"
-                    >
-                      <X size={8} />
-                    </button>
-                  </div>
-                )
-              }
-              if (att.type === 'audio') {
-                return (
-                  <div
-                    key={`aud-${i}`}
-                    style={style.audioSlot}
-                    onClick={() => setPlayingAudio(att)}
-                    title={att.fileName}
-                  >
-                    <Music size={14} style={{ color: 'var(--cy-text-muted)' }} />
-                    <button
-                      style={style.removeBtn as CSSProperties}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeAttachment(i)
-                      }}
-                      aria-label="Remove"
-                    >
-                      <X size={8} />
-                    </button>
-                  </div>
-                )
-              }
-              /* document */
-              return (
-                <div
-                  key={`doc-${i}`}
-                  style={style.docSlot}
-                  onClick={() => downloadAttachment(att)}
-                  title={att.fileName}
-                >
-                  <FileText size={12} style={{ color: 'var(--cy-text-muted)' }} />
-                  <span style={style.docExt}>{att.ext}</span>
-                  <button
-                    style={style.removeBtn as CSSProperties}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      removeAttachment(i)
-                    }}
-                    aria-label="Remove"
-                  >
-                    <X size={8} />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
 
       {/* Hidden capture canvas */}
@@ -670,71 +464,6 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
         </DialogContent>
       </Dialog>
 
-      {/* ── Image Preview Dialog ── */}
-      <Dialog
-        open={!!previewImage}
-        onOpenChange={(open) => { if (!open) setPreviewImage(null) }}
-      >
-        <DialogContent className="sm:max-w-lg" showCloseButton>
-          <DialogTitle className="sr-only">Image Preview</DialogTitle>
-          {previewImage && (
-            <>
-              <img
-                src={previewImage.dataUrl}
-                alt={previewImage.fileName}
-                style={{
-                  display: 'block',
-                  maxWidth: '100%',
-                  maxHeight: '70vh',
-                  borderRadius: '8px',
-                  objectFit: 'contain',
-                }}
-              />
-              <button
-                onClick={() => downloadAttachment(previewImage)}
-                style={{
-                  ...style.switchBtn,
-                  position: 'absolute',
-                  top: '8px',
-                  left: '8px',
-                }}
-                aria-label="Download"
-              >
-                <Download size={14} />
-              </button>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Audio Player Dialog ── */}
-      {playingAudio && (
-        <div 
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'transparent'
-          }}
-          onClick={() => setPlayingAudio(null)}
-        >
-          <div style={{ background: '#1c1c1c', padding: '16px', borderRadius: '12px', border: '1px solid var(--cy-border)' }} onClick={(e) => e.stopPropagation()}>
-            <WaveformPlayer 
-              url={playingAudio.objectUrl} 
-              fileName={playingAudio.fileName} 
-              blob={playingAudio.file} 
-              onClose={() => setPlayingAudio(null)} 
-              onDownload={() => downloadAttachment(playingAudio)}
-            />
-          </div>
-        </div>
-      )}
     </>
   )
 }
