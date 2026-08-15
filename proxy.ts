@@ -130,6 +130,7 @@ function applySecurityHeaders(response: NextResponse): NextResponse {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: blob:",
+      "media-src 'self' blob:",
       "connect-src 'self' https://*.firebaseio.com https://*.firebasedatabase.app https://*.googleapis.com wss://*.firebaseio.com wss://*.firebasedatabase.app",
       "frame-src 'self' https://*.firebasedatabase.app https://*.firebaseio.com https://*.googleapis.com https://apis.google.com https://www.gstatic.com",
       "frame-ancestors 'none'",
