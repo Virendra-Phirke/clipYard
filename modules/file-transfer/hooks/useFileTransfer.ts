@@ -50,6 +50,11 @@ export function useFileTransfer({
   const [sendQueue, setSendQueue] = useState<TransferQueueItem[]>([])
   const [isProcessingQueue, setIsProcessingQueue] = useState(false)
 
+  // Stable refs for callbacks that need current values without re-creating the receiver
+  const updateTransferRef = useRef<(transferId: string, updates: Partial<Transfer>) => void>(() => {})
+  const roomIdRef = useRef(roomId)
+  roomIdRef.current = roomId
+
   // Load persisted files from IndexedDB on mount
   useEffect(() => {
     if (!roomId || hasLoadedDB) return
@@ -87,27 +92,6 @@ export function useFileTransfer({
     }).catch(console.error)
   }, [roomId, hasLoadedDB])
 
-  // Handle incoming DataChannel messages
-  const handleMessage = useCallback((peerId: string, event: MessageEvent) => {
-    const parsed = parseIncomingMessage(event.data)
-    const receiver = fileReceiversRef.current.get(peerId)
-    if (!receiver) return
-
-    if (parsed.kind === 'control') {
-      receiver.handleControlMessage(parsed.message)
-    } else {
-      receiver.handleBinaryData(parsed.data)
-    }
-  }, [])
-
-  const webrtc = useWebRTC({
-    roomId,
-    localUid,
-    presence,
-    enabled,
-    onMessage: handleMessage,
-  })
-
   // Update transfer helper
   const updateTransfer = useCallback((transferId: string, updates: Partial<Transfer>) => {
     setTransfers((prev) =>
@@ -136,67 +120,96 @@ export function useFileTransfer({
     )
   }, [])
 
-  // Create file receivers for each connected peer
-  useEffect(() => {
-    for (const peer of webrtc.peers) {
-      if (peer.channel && !fileReceiversRef.current.has(peer.peerId)) {
-        const receiver = new FileReceiver({
-          onTransferStart: (metadata: FileTransferMetadata) => {
-            const newTransfer: Transfer = {
-              id: metadata.transferId,
-              fileName: metadata.fileName,
-              fileSize: metadata.size,
-              mimeType: metadata.mimeType,
-              category: metadata.category,
-              direction: 'received',
-              peerId: peer.peerId,
-              peerName: metadata.senderName || peer.peerName,
-              status: 'transferring',
-              progress: 0,
-              createdAt: Date.now(),
-            }
-            setTransfers((prev) => [...prev, newTransfer])
-          },
-          onProgress: (transferId: string, bytesReceived: number, totalBytes: number) => {
-            const progress = Math.round((bytesReceived / totalBytes) * 100)
-            updateTransfer(transferId, { progress, status: 'transferring' })
-          },
-          onComplete: (transferId: string, blob: Blob, metadata: FileTransferMetadata) => {
-            const url = URL.createObjectURL(blob)
-            objectUrlsRef.current.add(url)
-            updateTransfer(transferId, {
-              status: 'completed',
-              progress: 100,
-              objectUrl: url,
-              blob,
-            })
+  // Keep the ref in sync so the lazily-created FileReceiver always calls the latest updateTransfer
+  updateTransferRef.current = updateTransfer
 
-            // Persist to IndexedDB
-            saveFileToDB({
-              id: metadata.transferId,
-              roomId,
-              fileName: metadata.fileName,
-              fileSize: metadata.size,
-              mimeType: metadata.mimeType,
-              category: metadata.category,
-              blob,
-              createdAt: Date.now(),
-              peerId: peer.peerId,
-              peerName: metadata.senderName || peer.peerName,
-            }).catch(console.error)
-          },
-          onError: (transferId: string, error: string) => {
-            updateTransfer(transferId, { status: 'failed', error })
-          },
-          onCancelled: (transferId: string) => {
-            updateTransfer(transferId, { status: 'cancelled' })
-          },
+  /**
+   * Lazily create a FileReceiver for the given peer if one doesn't exist yet.
+   * This eliminates the race condition where a message could arrive before
+   * the peer-watching useEffect creates the receiver.
+   */
+  const getOrCreateReceiver = useCallback((peerId: string, peerName?: string): FileReceiver => {
+    const existing = fileReceiversRef.current.get(peerId)
+    if (existing) return existing
+
+    const receiver = new FileReceiver({
+      onTransferStart: (metadata: FileTransferMetadata) => {
+        const newTransfer: Transfer = {
+          id: metadata.transferId,
+          fileName: metadata.fileName,
+          fileSize: metadata.size,
+          mimeType: metadata.mimeType,
+          category: metadata.category,
+          direction: 'received',
+          peerId,
+          peerName: metadata.senderName || peerName || 'Participant',
+          status: 'transferring',
+          progress: 0,
+          createdAt: Date.now(),
+        }
+        setTransfers((prev) => [...prev, newTransfer])
+      },
+      onProgress: (transferId: string, bytesReceived: number, totalBytes: number) => {
+        const progress = Math.round((bytesReceived / totalBytes) * 100)
+        updateTransferRef.current(transferId, { progress, status: 'transferring' })
+      },
+      onComplete: (transferId: string, blob: Blob, metadata: FileTransferMetadata) => {
+        const url = URL.createObjectURL(blob)
+        objectUrlsRef.current.add(url)
+        updateTransferRef.current(transferId, {
+          status: 'completed',
+          progress: 100,
+          objectUrl: url,
+          blob,
         })
-        fileReceiversRef.current.set(peer.peerId, receiver)
-      }
-    }
 
-    // Clean up receivers for disconnected peers
+        // Persist to IndexedDB
+        saveFileToDB({
+          id: metadata.transferId,
+          roomId: roomIdRef.current,
+          fileName: metadata.fileName,
+          fileSize: metadata.size,
+          mimeType: metadata.mimeType,
+          category: metadata.category,
+          blob,
+          createdAt: Date.now(),
+          peerId,
+          peerName: metadata.senderName || peerName || 'Participant',
+        }).catch(console.error)
+      },
+      onError: (transferId: string, error: string) => {
+        updateTransferRef.current(transferId, { status: 'failed', error })
+      },
+      onCancelled: (transferId: string) => {
+        updateTransferRef.current(transferId, { status: 'cancelled' })
+      },
+    })
+    fileReceiversRef.current.set(peerId, receiver)
+    return receiver
+  }, [])
+
+  // Handle incoming DataChannel messages — creates receiver lazily on first message
+  const handleMessage = useCallback((peerId: string, event: MessageEvent) => {
+    const parsed = parseIncomingMessage(event.data)
+    const receiver = getOrCreateReceiver(peerId)
+
+    if (parsed.kind === 'control') {
+      receiver.handleControlMessage(parsed.message)
+    } else {
+      receiver.handleBinaryData(parsed.data)
+    }
+  }, [getOrCreateReceiver])
+
+  const webrtc = useWebRTC({
+    roomId,
+    localUid,
+    presence,
+    enabled,
+    onMessage: handleMessage,
+  })
+
+  // Clean up receivers for disconnected peers
+  useEffect(() => {
     for (const [peerId, receiver] of fileReceiversRef.current) {
       const stillConnected = webrtc.peers.some(
         (p) => p.peerId === peerId && p.channel,
@@ -206,7 +219,7 @@ export function useFileTransfer({
         fileReceiversRef.current.delete(peerId)
       }
     }
-  }, [webrtc.peers, updateTransfer, roomId])
+  }, [webrtc.peers])
 
   // Queue processing effect
   useEffect(() => {

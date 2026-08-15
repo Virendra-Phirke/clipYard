@@ -1091,86 +1091,143 @@ function PeersIndicator({
   )
 }
 
-/* ── QR hover icon: small icon that reveals full QR on hover ── */
+/* ── QR click icon: small icon that opens a centered modal with QR ── */
 function QrHoverIcon({ roomUrl }: { roomUrl: string }) {
-  const [hovered, setHovered] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const { theme } = useTheme()
 
+  useEffect(() => {
+    if (!showModal) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowModal(false)
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [showModal])
+
   return (
-    <div
-      style={{ position: 'relative', display: 'inline-flex' }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <>
       <span
         className="material-symbols-outlined"
         style={{
           fontSize: '18px',
-          color: hovered ? 'var(--cy-primary)' : 'var(--cy-text-muted)',
+          color: 'var(--cy-text-muted)',
           cursor: 'pointer',
           transition: 'color 0.15s ease',
         }}
+        onClick={() => setShowModal(true)}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--cy-primary)' }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cy-text-muted)' }}
       >
         qr_code_2
       </span>
 
-      {/* Hover popover with full QR */}
-      {hovered && (
+      {/* Centered modal overlay — no backdrop filter */}
+      {showModal && (
         <div
           style={{
-            position: 'absolute',
-            top: 'calc(100% + 10px)',
-            right: '-10px', // slightly offset so it aligns well with the container
-            backgroundColor: 'var(--cy-surface)',
-            border: '1.5px solid var(--cy-border)',
-            borderRadius: '4px',
-            padding: '12px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-            zIndex: 50,
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 9999,
             display: 'flex',
-            flexDirection: 'column',
             alignItems: 'center',
-            gap: '8px',
+            justifyContent: 'center',
+            padding: '24px',
           }}
+          onClick={() => setShowModal(false)}
         >
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '11px',
-              letterSpacing: '0.08em',
-              fontWeight: 500,
-              color: 'var(--cy-text)',
-              textTransform: 'uppercase',
-            }}
-          >
-            Scan to Join
-          </span>
           <div
             style={{
-              width: '160px',
-              height: '160px',
-              backgroundColor: 'var(--cy-surface-white)',
+              backgroundColor: 'var(--cy-surface)',
               border: '1.5px solid var(--cy-border)',
-              padding: '6px',
+              borderRadius: '8px',
+              padding: '24px',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
+              gap: '16px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              position: 'relative',
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {roomUrl && (
-              <QRCodeSVG
-                value={roomUrl}
-                size={148}
-                fgColor={theme === 'dark' ? '#78d8b9' : '#006a53'}
-                bgColor={theme === 'dark' ? '#1c1c1c' : '#ffffff'}
-                level="M"
-                style={{ width: '100%', height: '100%' }}
-              />
-            )}
+            {/* Close button */}
+            <button
+              onClick={() => setShowModal(false)}
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                background: 'none',
+                border: 'none',
+                color: 'var(--cy-text-muted)',
+                cursor: 'pointer',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '4px',
+                transition: 'color 0.15s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--cy-text)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--cy-text-muted)' }}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>close</span>
+            </button>
+
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '14px',
+                letterSpacing: '0.08em',
+                fontWeight: 500,
+                color: 'var(--cy-text)',
+                textTransform: 'uppercase',
+              }}
+            >
+              Scan to Join
+            </span>
+            <div
+              style={{
+                width: '200px',
+                height: '200px',
+                backgroundColor: 'var(--cy-surface-white)',
+                border: '1.5px solid var(--cy-border)',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {roomUrl && (
+                <QRCodeSVG
+                  value={roomUrl}
+                  size={184}
+                  fgColor={theme === 'dark' ? '#78d8b9' : '#006a53'}
+                  bgColor={theme === 'dark' ? '#1c1c1c' : '#ffffff'}
+                  level="M"
+                  style={{ width: '100%', height: '100%' }}
+                />
+              )}
+            </div>
+            <span
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: '11px',
+                color: 'var(--cy-text-muted)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Point your phone camera at this code
+            </span>
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 

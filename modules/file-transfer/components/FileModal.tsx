@@ -31,7 +31,6 @@ const S: Record<string, CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '24px',
-    backdropFilter: 'blur(4px)',
   },
   audioOverlay: {
     position: 'fixed',
