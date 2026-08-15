@@ -82,11 +82,11 @@
   --color-destructive-foreground: var(--cy-surface-white);
 
   /* ── Typography ── */
-  --font-headline-lg: "Hanken Grotesk", sans-serif;
-  --font-headline-md: "Hanken Grotesk", sans-serif;
-  --font-body-md: "Hanken Grotesk", sans-serif;
-  --font-code-sm: "JetBrains Mono", monospace;
-  --font-metadata-sm: "JetBrains Mono", monospace;
+  --font-headline-lg: "Space Grotesk", sans-serif;
+  --font-headline-md: "Space Grotesk", sans-serif;
+  --font-body-md: "Space Grotesk", sans-serif;
+  --font-code-sm: "Space Mono", monospace;
+  --font-metadata-sm: "Space Mono", monospace;
 
   /* ── Spacing ── */
   --spacing-gutter: 24px;
@@ -158,12 +158,28 @@ html.dark {
   --cy-qr-bg: #1c1c1c;
 }
 
+:root {
+  --page-padding: 32px 24px;
+  --header-padding: 12px 24px;
+  --textarea-height: 600px;
+  --room-grid-gap: 24px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-padding: 16px 12px;
+    --header-padding: 12px 16px;
+    --textarea-height: max(300px, calc(100dvh - 350px));
+    --room-grid-gap: 16px;
+  }
+}
+
 /* ── Base body styles ── */
 body {
   background-color: var(--cy-bg);
   background-image: radial-gradient(var(--cy-bg-dots) 1px, transparent 1px);
   background-size: 24px 24px;
-  font-family: "Hanken Grotesk", sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   color: var(--cy-text);
   min-height: 100vh;
   display: flex;
@@ -322,8 +338,37 @@ nav {
     padding: 32px 16px;
   }
 
-  .cy-room-header-left {
+  .cy-room-header {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "logo actions"
+      "info info";
     gap: 12px;
+    width: 100%;
+  }
+
+  .cy-header-logo { grid-area: logo; }
+  
+  .cy-header-actions { 
+    grid-area: actions; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px;
+    justify-self: end;
+  }
+
+  .cy-header-info {
+    grid-area: info;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--cy-border);
+  }
+
+  .cy-hide-mobile {
+    display: none !important;
   }
 
   .cy-nav-links {

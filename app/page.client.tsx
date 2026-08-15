@@ -102,7 +102,7 @@ export default function HomePageClient() {
         >
           <div
             style={{
-              fontFamily: "Hanken Grotesk, sans-serif",
+              fontFamily: "Space Grotesk, sans-serif",
               fontSize: "24px",
               lineHeight: "32px",
               letterSpacing: "-0.01em",
@@ -116,7 +116,7 @@ export default function HomePageClient() {
             <a
               href="#how-it-works"
               style={{
-                fontFamily: "Hanken Grotesk, sans-serif",
+                fontFamily: "Space Grotesk, sans-serif",
                 fontSize: "16px",
                 lineHeight: "24px",
                 color: "var(--cy-text-secondary)",
@@ -133,11 +133,11 @@ export default function HomePageClient() {
               How it works
             </a>
             <a
-              href="https://github.com"
+              href="https://github.com/Virendra-Phirke/clipYard"
               target="_blank"
               rel="noreferrer"
               style={{
-                fontFamily: "Hanken Grotesk, sans-serif",
+                fontFamily: "Space Grotesk, sans-serif",
                 fontSize: "16px",
                 lineHeight: "24px",
                 color: "var(--cy-text-secondary)",
@@ -182,7 +182,7 @@ export default function HomePageClient() {
         >
           <div
             style={{
-              fontFamily: "JetBrains Mono, monospace",
+              fontFamily: "Space Mono, monospace",
               fontSize: "14px",
               lineHeight: "20px",
               letterSpacing: "0.1em",
@@ -197,7 +197,7 @@ export default function HomePageClient() {
 
           <h1
             style={{
-              fontFamily: "Hanken Grotesk, sans-serif",
+              fontFamily: "Space Grotesk, sans-serif",
               fontSize: "clamp(32px, 5vw, 48px)",
               lineHeight: "1.15",
               letterSpacing: "-0.02em",
@@ -211,7 +211,7 @@ export default function HomePageClient() {
 
           <p
             style={{
-              fontFamily: "Hanken Grotesk, sans-serif",
+              fontFamily: "Space Grotesk, sans-serif",
               fontSize: "18px",
               lineHeight: "28px",
               color: "var(--cy-text-secondary)",
@@ -232,7 +232,7 @@ export default function HomePageClient() {
               style={{
                 backgroundColor: "var(--cy-primary)",
                 color: "var(--cy-on-primary)",
-                fontFamily: "Hanken Grotesk, sans-serif",
+                fontFamily: "Space Grotesk, sans-serif",
                 fontSize: "16px",
                 lineHeight: "24px",
                 fontWeight: 600,
@@ -257,7 +257,7 @@ export default function HomePageClient() {
 
             <span
               style={{
-                fontFamily: "Hanken Grotesk, sans-serif",
+                fontFamily: "Space Grotesk, sans-serif",
                 fontSize: "16px",
                 color: "var(--cy-text-secondary)",
               }}
@@ -279,7 +279,7 @@ export default function HomePageClient() {
               >
                 <span
                   style={{
-                    fontFamily: "JetBrains Mono, monospace",
+                    fontFamily: "Space Mono, monospace",
                     fontSize: "14px",
                     lineHeight: "20px",
                     letterSpacing: "0.02em",
@@ -303,7 +303,7 @@ export default function HomePageClient() {
                   placeholder="Room code"
                   maxLength={8}
                   style={{
-                    fontFamily: "JetBrains Mono, monospace",
+                    fontFamily: "Space Mono, monospace",
                     fontSize: "13px",
                     lineHeight: "18px",
                     backgroundColor: "transparent",
@@ -320,7 +320,7 @@ export default function HomePageClient() {
                   style={{
                     backgroundColor: "var(--cy-primary-text)",
                     color: "var(--cy-surface-white)",
-                    fontFamily: "Hanken Grotesk, sans-serif",
+                    fontFamily: "Space Grotesk, sans-serif",
                     fontSize: "14px",
                     lineHeight: "20px",
                     fontWeight: 600,
@@ -371,7 +371,7 @@ export default function HomePageClient() {
               role="alert"
               style={{
                 marginTop: "12px",
-                fontFamily: "JetBrains Mono, monospace",
+                fontFamily: "Space Mono, monospace",
                 fontSize: "13px",
                 color: "var(--cy-error)",
               }}
@@ -416,7 +416,7 @@ export default function HomePageClient() {
               />
               <span
                 style={{
-                  fontFamily: "JetBrains Mono, monospace",
+                  fontFamily: "Space Mono, monospace",
                   fontSize: "14px",
                   lineHeight: "20px",
                   letterSpacing: "0.05em",
@@ -430,7 +430,7 @@ export default function HomePageClient() {
             </div>
             <div
               style={{
-                fontFamily: "JetBrains Mono, monospace",
+                fontFamily: "Space Mono, monospace",
                 fontSize: "13px",
                 lineHeight: "18px",
                 backgroundColor: "var(--cy-surface-container-high)",
@@ -463,7 +463,7 @@ export default function HomePageClient() {
                 backgroundColor: "transparent",
                 border: "none",
                 outline: "none",
-                fontFamily: "JetBrains Mono, monospace",
+                fontFamily: "Space Mono, monospace",
                 fontSize: "13px",
                 lineHeight: "18px",
                 color: "var(--cy-text)",
@@ -511,7 +511,7 @@ export default function HomePageClient() {
               borderTop: "1.5px solid var(--cy-border)",
               backgroundColor: "var(--cy-surface)",
               borderRadius: "0 0 4px 4px",
-              fontFamily: "JetBrains Mono, monospace",
+              fontFamily: "Space Mono, monospace",
               fontSize: "13px",
               lineHeight: "18px",
               color: "var(--cy-text-secondary)",
@@ -568,7 +568,7 @@ export default function HomePageClient() {
               >
                 <span
                   style={{
-                    fontFamily: "JetBrains Mono, monospace",
+                    fontFamily: "Space Mono, monospace",
                     fontSize: "14px",
                     letterSpacing: "0.02em",
                     fontWeight: 500,
@@ -588,7 +588,7 @@ export default function HomePageClient() {
                 />
                 <h3
                   style={{
-                    fontFamily: "Hanken Grotesk, sans-serif",
+                    fontFamily: "Space Grotesk, sans-serif",
                     fontSize: "16px",
                     lineHeight: "24px",
                     fontWeight: 600,
@@ -600,7 +600,7 @@ export default function HomePageClient() {
                 </h3>
                 <p
                   style={{
-                    fontFamily: "Hanken Grotesk, sans-serif",
+                    fontFamily: "Space Grotesk, sans-serif",
                     fontSize: "14px",
                     lineHeight: "20px",
                     color: "var(--cy-text-secondary)",
@@ -638,7 +638,7 @@ export default function HomePageClient() {
                 </span>
                 <span
                   style={{
-                    fontFamily: "JetBrains Mono, monospace",
+                    fontFamily: "Space Mono, monospace",
                     fontSize: "13px",
                     lineHeight: "18px",
                     color: "var(--cy-text)",
@@ -676,7 +676,7 @@ export default function HomePageClient() {
         >
           <div
             style={{
-              fontFamily: "Hanken Grotesk, sans-serif",
+              fontFamily: "Space Grotesk, sans-serif",
               fontSize: "24px",
               lineHeight: "32px",
               letterSpacing: "-0.01em",
@@ -692,7 +692,7 @@ export default function HomePageClient() {
               flexWrap: "wrap",
               alignItems: "center",
               gap: "16px",
-              fontFamily: "JetBrains Mono, monospace",
+              fontFamily: "Space Mono, monospace",
               fontSize: "13px",
               lineHeight: "18px",
               color: "var(--cy-text-secondary)",

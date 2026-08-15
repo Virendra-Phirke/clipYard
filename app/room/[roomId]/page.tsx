@@ -50,7 +50,7 @@ const S = {
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column' as const,
-    fontFamily: 'Hanken Grotesk, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     color: 'var(--cy-text)',
     fontSize: '16px',
     lineHeight: '24px',
@@ -62,13 +62,11 @@ const S = {
     borderBottom: '1.5px solid var(--cy-border-strong)',
     width: '100%',
     minHeight: '64px',
-    padding: '12px 24px',
-    maxWidth: '1280px',
-    margin: '0 auto',
+    padding: 'var(--header-padding)',
     boxSizing: 'border-box' as const,
   },
   logo: {
-    fontFamily: 'Hanken Grotesk, sans-serif',
+    fontFamily: 'Space Grotesk, sans-serif',
     fontSize: '24px',
     lineHeight: '32px',
     letterSpacing: '-0.01em',
@@ -85,7 +83,7 @@ const S = {
     border: '1.5px solid var(--cy-border)',
   },
   roomBadgeLabel: {
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
     color: 'var(--cy-text-secondary)',
@@ -93,7 +91,7 @@ const S = {
     letterSpacing: '0.05em',
   },
   roomBadgeId: {
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '14px',
     lineHeight: '20px',
     letterSpacing: '0.02em',
@@ -102,7 +100,7 @@ const S = {
   },
   connectedDot: { width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)' },
   connectedLabel: {
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
     color: 'var(--cy-text-secondary)',
@@ -119,21 +117,20 @@ const S = {
     borderRadius: '2px',
     color: 'var(--cy-text)',
     cursor: 'pointer',
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '14px',
     letterSpacing: '0.02em',
     fontWeight: 500,
     transition: 'background-color 0.2s ease',
     whiteSpace: 'nowrap' as const,
   },
-  /* main grid */
   main: {
     flexGrow: 1,
     maxWidth: '1280px',
     margin: '0 auto',
     width: '100%',
-    padding: '32px 24px',
-    gap: '24px',
+    padding: 'var(--page-padding)',
+    gap: 'var(--room-grid-gap)',
     boxSizing: 'border-box' as const,
   },
   /* editor column */
@@ -152,14 +149,14 @@ const S = {
     padding: '16px',
     resize: 'none' as const,
     outline: 'none',
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
     color: 'var(--cy-text)',
     backgroundColor: 'transparent',
     border: 'none',
     minHeight: '300px',
-    height: '600px',
+    height: 'var(--textarea-height)',
     maxHeight: '80vh',
     boxSizing: 'border-box' as const,
   },
@@ -170,12 +167,12 @@ const S = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: '"Space Mono", monospace',
     fontSize: '13px',
     lineHeight: '18px',
     color: 'var(--cy-text-secondary)',
     flexWrap: 'wrap' as const,
-    gap: '8px',
+    gap: '16px',
   },
   syncedDot: { width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cy-primary)' },
   /* action buttons */
@@ -184,33 +181,33 @@ const S = {
     flex: 1,
     backgroundColor: 'var(--cy-primary)',
     color: 'var(--cy-on-primary)',
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '14px',
+    fontFamily: 'Space Mono, monospace',
+    fontSize: '12px',
     letterSpacing: '0.05em',
     fontWeight: 500,
-    padding: '12px 24px',
+    padding: '8px 16px',
     borderRadius: '4px',
     border: '1.5px solid var(--cy-primary)',
     cursor: 'pointer',
     textTransform: 'uppercase' as const,
     transition: 'background-color 0.2s ease',
-    minWidth: '120px',
+    minWidth: '100px',
   },
   clearBtn: {
     flex: 1,
     backgroundColor: 'var(--cy-surface-container)',
     color: 'var(--cy-secondary-text)',
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '14px',
+    fontFamily: 'Space Mono, monospace',
+    fontSize: '12px',
     letterSpacing: '0.05em',
     fontWeight: 500,
-    padding: '12px 24px',
+    padding: '8px 16px',
     borderRadius: '4px',
     border: '1.5px solid var(--cy-border)',
     cursor: 'pointer',
     textTransform: 'uppercase' as const,
     transition: 'background-color 0.2s ease',
-    minWidth: '120px',
+    minWidth: '100px',
   },
   /* sidebar */
   sidebar: { display: 'flex', flexDirection: 'column' as const, gap: '24px' },
@@ -227,7 +224,7 @@ const S = {
     padding: '20px',
   },
   sideCardTitle: {
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '14px',
     lineHeight: '20px',
     letterSpacing: '0.08em',
@@ -243,7 +240,7 @@ const S = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
     color: 'var(--cy-text-secondary)',
@@ -255,7 +252,7 @@ const S = {
     alignItems: 'center',
     padding: '4px 0',
     borderBottom: '1.5px solid var(--cy-border)',
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
     color: 'var(--cy-text-secondary)',
@@ -267,7 +264,7 @@ const S = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '4px 0',
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
     color: 'var(--cy-text-secondary)',
@@ -286,7 +283,7 @@ const S = {
     gap: '16px',
   },
   qrTitle: {
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '14px',
     letterSpacing: '0.08em',
     fontWeight: 500,
@@ -319,7 +316,7 @@ const S = {
     maxWidth: '1280px',
     margin: '0 auto',
     gap: '16px',
-    fontFamily: 'JetBrains Mono, monospace',
+    fontFamily: 'Space Mono, monospace',
     fontSize: '13px',
     lineHeight: '18px',
     color: 'var(--cy-secondary-text)',
@@ -669,7 +666,7 @@ export default function RoomPage() {
     return (
       <Shell>
         <div style={{ maxWidth: '360px', width: '100%', textAlign: 'center', padding: '0 16px' }}>
-          <h1 style={{ fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '24px', fontWeight: 700, color: 'var(--cy-text)', marginBottom: '8px' }}>
+          <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '24px', fontWeight: 700, color: 'var(--cy-text)', marginBottom: '8px' }}>
             What&apos;s your name?
           </h1>
           <p style={{ color: 'var(--cy-text-secondary)', marginBottom: '20px', fontSize: '14px' }}>
@@ -689,7 +686,7 @@ export default function RoomPage() {
               marginBottom: '16px',
               borderRadius: '4px',
               border: '1.5px solid var(--cy-border)',
-              fontFamily: 'JetBrains Mono, monospace',
+              fontFamily: 'Space Mono, monospace',
               fontSize: '14px',
               outline: 'none',
               boxSizing: 'border-box' as const,
@@ -714,7 +711,7 @@ export default function RoomPage() {
   if (status === 'loading') {
     return (
       <Shell>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '13px', color: 'var(--cy-text-secondary)', letterSpacing: '0.05em' }}>
+        <div style={{ fontFamily: 'Space Mono, monospace', fontSize: '13px', color: 'var(--cy-text-secondary)', letterSpacing: '0.05em' }}>
           CONNECTING TO ROOM…
         </div>
       </Shell>
@@ -732,7 +729,7 @@ export default function RoomPage() {
           }}>
             <span className="material-symbols-outlined" style={{ color: 'var(--cy-text-muted)', fontSize: '20px' }}>wifi_off</span>
           </div>
-          <h1 style={{ fontFamily: 'Hanken Grotesk, sans-serif', fontSize: '24px', fontWeight: 700, color: 'var(--cy-text)', marginBottom: '12px' }}>
+          <h1 style={{ fontFamily: 'Space Grotesk, sans-serif', fontSize: '24px', fontWeight: 700, color: 'var(--cy-text)', marginBottom: '12px' }}>
             Room unavailable
           </h1>
           <p style={{ color: 'var(--cy-text-secondary)', marginBottom: '28px' }}>
@@ -759,25 +756,27 @@ export default function RoomPage() {
       {/* ── Header ── */}
       <div style={{ backgroundColor: 'var(--cy-surface)', borderBottom: '1.5px solid var(--cy-border-strong)', position: 'sticky', top: 0, zIndex: 50 }}>
         <header className="cy-room-header" style={S.header}>
-          {/* Left: logo + room badge + connected */}
-          <div className="cy-room-header-left">
+          {/* Logo */}
+          <div className="cy-header-logo">
             <button onClick={leave} style={{ ...S.logo, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
               ClipYard
             </button>
+          </div>
 
+          {/* Room info */}
+          <div className="cy-header-info">
             <div style={S.roomBadge}>
-              <span style={S.roomBadgeLabel}>Room:</span>
+              <span style={S.roomBadgeLabel} className="cy-hide-mobile">Room:</span>
               <span style={S.roomBadgeId}>{displayId}</span>
             </div>
-
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{ ...S.connectedDot, backgroundColor: isConnected ? 'var(--cy-primary)' : 'var(--cy-error)' }} />
               <span style={S.connectedLabel}>{isConnected ? 'Connected' : 'Offline'}</span>
             </div>
           </div>
 
-          {/* Right: theme toggle + share */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Actions */}
+          <div className="cy-header-actions">
             <ThemeToggle />
             <button
               id="share-btn"
@@ -787,7 +786,7 @@ export default function RoomPage() {
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>share</span>
-              {notice || 'SHARE'}
+              <span className="cy-hide-mobile">{notice || 'SHARE'}</span>
             </button>
           </div>
         </header>
@@ -809,7 +808,7 @@ export default function RoomPage() {
             />
             <div style={S.editorFooter}>
               {/* Left: attachment menu + character count */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto' }}>
                 {firebaseUidRef.current && (
                   <AttachmentMenu
                     onFilesSelected={handleAttachmentFiles}
@@ -818,12 +817,12 @@ export default function RoomPage() {
                 <span>{charCount} CHARACTERS</span>
               </div>
               {/* Center: synced indicator */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', flex: '1 1 auto' }}>
                 <div style={{ ...S.syncedDot, backgroundColor: saved ? 'var(--cy-primary)' : 'var(--cy-warning)' }} />
                 <span style={{ textTransform: 'uppercase' }}>{saved ? 'Synced' : 'Saving…'}</span>
               </div>
               {/* Right: connected peers with hover popup */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flex: '1 1 auto' }}>
                 <PeersIndicator
                   people={people}
                   userName={userName ?? ''}
@@ -907,7 +906,7 @@ export default function RoomPage() {
                 border: 'none',
                 padding: 0,
                 color: 'var(--cy-primary)',
-                fontFamily: 'JetBrains Mono, monospace',
+                fontFamily: 'Space Mono, monospace',
                 fontSize: '12px',
                 letterSpacing: '0.02em',
                 cursor: 'pointer',
@@ -1026,7 +1025,7 @@ function PeersIndicator({
           border: '1.5px solid var(--cy-border)',
           backgroundColor: 'var(--cy-surface-container)',
           cursor: 'default',
-          fontFamily: 'JetBrains Mono, monospace',
+          fontFamily: 'Space Mono, monospace',
           fontSize: '11px',
           lineHeight: '14px',
           letterSpacing: '0.04em',
@@ -1056,7 +1055,7 @@ function PeersIndicator({
             padding: '10px 12px',
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             zIndex: 30,
-            fontFamily: 'JetBrains Mono, monospace',
+            fontFamily: 'Space Mono, monospace',
             fontSize: '12px',
             lineHeight: '16px',
             color: 'var(--cy-text-secondary)',
@@ -1181,7 +1180,7 @@ function QrHoverIcon({ roomUrl }: { roomUrl: string }) {
 
             <span
               style={{
-                fontFamily: 'JetBrains Mono, monospace',
+                fontFamily: 'Space Mono, monospace',
                 fontSize: '14px',
                 letterSpacing: '0.08em',
                 fontWeight: 500,
@@ -1216,7 +1215,7 @@ function QrHoverIcon({ roomUrl }: { roomUrl: string }) {
             </div>
             <span
               style={{
-                fontFamily: 'JetBrains Mono, monospace',
+                fontFamily: 'Space Mono, monospace',
                 fontSize: '11px',
                 color: 'var(--cy-text-muted)',
                 letterSpacing: '0.02em',
