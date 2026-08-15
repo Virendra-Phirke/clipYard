@@ -2,7 +2,7 @@
 
 import { type CSSProperties, useEffect } from 'react'
 import { getFileCategory } from '@/lib/webrtc/fileTransfer'
-import { Download } from 'lucide-react'
+import { Download, X } from 'lucide-react'
 import { WaveformPlayer } from './WaveformPlayer'
 import { CustomVideoPlayer } from './CustomVideoPlayer'
 
@@ -24,10 +24,9 @@ const S: Record<string, CSSProperties> = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
     zIndex: 9999,
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '24px',
@@ -46,6 +45,46 @@ const S: Record<string, CSSProperties> = {
     padding: '24px',
     backgroundColor: 'transparent',
   },
+  // Image container — holds the image + overlaid action buttons
+  imageWrapper: {
+    position: 'relative',
+    maxWidth: '90vw',
+    maxHeight: '90vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  image: {
+    maxWidth: '100%',
+    maxHeight: '90vh',
+    objectFit: 'contain',
+    borderRadius: '6px',
+    display: 'block',
+  },
+  // Floating action buttons container — top-right of image
+  actions: {
+    position: 'absolute',
+    top: '12px',
+    right: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    zIndex: 2,
+  },
+  actionBtn: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '50%',
+    border: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'background 0.2s, transform 0.15s',
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    color: '#fff',
+  },
+  // Video/document header (kept for non-image media)
   header: {
     position: 'absolute',
     top: 0,
@@ -64,37 +103,10 @@ const S: Record<string, CSSProperties> = {
     fontSize: '14px',
     fontWeight: 500,
   },
-  closeBtn: {
-    background: 'rgba(255, 255, 255, 0.1)',
-    border: 'none',
-    color: '#fff',
-    cursor: 'pointer',
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'background 0.2s',
-  },
   headerActions: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-  },
-  downloadBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    background: 'var(--cy-primary)',
-    color: 'var(--cy-primary-foreground)',
-    padding: '6px 12px',
-    borderRadius: '6px',
-    textDecoration: 'none',
-    fontFamily: 'ui-sans-serif, system-ui, sans-serif',
-    fontSize: '13px',
-    fontWeight: 500,
-    transition: 'opacity 0.2s',
+    gap: '8px',
   },
   mediaContainer: {
     position: 'relative',
@@ -104,13 +116,6 @@ const S: Record<string, CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  media: {
-    maxWidth: '100%',
-    maxHeight: 'calc(100vh - 48px)',
-    objectFit: 'contain',
-    borderRadius: '4px',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-  },
   iframe: {
     width: '80vw',
     height: '80vh',
@@ -118,14 +123,6 @@ const S: Record<string, CSSProperties> = {
     border: 'none',
     borderRadius: '8px',
     boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-  },
-  audioTitle: {
-    color: 'var(--cy-text)',
-    fontFamily: 'JetBrains Mono, monospace',
-    fontSize: '16px',
-    textAlign: 'center',
-    maxWidth: '300px',
-    wordBreak: 'break-word',
   },
 }
 
@@ -158,6 +155,7 @@ export const FileModal = ({ url, fileName, mimeType, blob, onClose }: FileModalP
     link.remove()
   }
 
+  // Audio — uses custom waveform player
   if (category === 'audio') {
     return (
       <div style={S.audioOverlay} onClick={onClose}>
@@ -168,41 +166,99 @@ export const FileModal = ({ url, fileName, mimeType, blob, onClose }: FileModalP
     )
   }
 
+  // Image — clean modal with overlaid download + close on top-right
+  if (category === 'image') {
+    return (
+      <div style={S.overlay} onClick={onClose}>
+        <div style={S.imageWrapper} onClick={(e) => e.stopPropagation()}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt={fileName} style={S.image} />
+
+          {/* Download + Close overlaid on top-right of the image */}
+          <div style={S.actions}>
+            <button
+              style={S.actionBtn}
+              onClick={handleDownload}
+              title="Download"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.75)'
+                e.currentTarget.style.transform = 'scale(1.1)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.55)'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              <Download size={18} />
+            </button>
+            <button
+              style={S.actionBtn}
+              onClick={onClose}
+              title="Close"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.75)'
+                e.currentTarget.style.transform = 'scale(1.1)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.55)'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Video / Document / Other — keep header-style layout
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={S.header} onClick={(e) => e.stopPropagation()}>
         <div style={S.title}>{fileName}</div>
         <div style={S.headerActions}>
           <button
+            style={S.actionBtn}
             onClick={handleDownload}
-            style={S.downloadBtn}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.8' }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1' }}
+            title="Download"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.75)'
+              e.currentTarget.style.transform = 'scale(1.1)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.55)'
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
           >
-            <Download size={16} />
-            Download
+            <Download size={18} />
           </button>
           <button
-            style={S.closeBtn}
+            style={S.actionBtn}
             onClick={onClose}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)' }}
+            title="Close"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.75)'
+              e.currentTarget.style.transform = 'scale(1.1)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.55)'
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
           >
-            <span className="material-symbols-outlined">close</span>
+            <X size={18} />
           </button>
         </div>
       </div>
       
-      <div style={{ ...S.mediaContainer, padding: 0 }} onClick={(e) => e.stopPropagation()}>
+      <div style={S.mediaContainer} onClick={(e) => e.stopPropagation()}>
         {category === 'video' ? (
           <CustomVideoPlayer url={url} />
-        ) : category === 'document' || category === 'file' ? (
-          <iframe src={url} style={S.iframe} title={fileName} />
         ) : (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img src={url} alt={fileName} style={S.media} />
+          <iframe src={url} style={S.iframe} title={fileName} />
         )}
       </div>
     </div>
   )
 }
+
