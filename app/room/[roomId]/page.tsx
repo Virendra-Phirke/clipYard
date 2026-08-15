@@ -698,6 +698,7 @@ export default function RoomPage() {
             id="username-continue-btn"
             onClick={submitName}
             disabled={!nameDraft.trim()}
+            className="cy-btn-primary"
             style={{ ...S.copyBtn, flex: 'none', width: '100%', opacity: nameDraft.trim() ? 1 : 0.5, cursor: nameDraft.trim() ? 'pointer' : 'not-allowed' }}
           >
             Continue
@@ -756,22 +757,24 @@ export default function RoomPage() {
       {/* ── Header ── */}
       <div style={{ backgroundColor: 'var(--cy-surface)', borderBottom: '1.5px solid var(--cy-border-strong)', position: 'sticky', top: 0, zIndex: 50 }}>
         <header className="cy-room-header" style={S.header}>
-          {/* Logo */}
-          <div className="cy-header-logo">
-            <button onClick={leave} style={{ ...S.logo, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-              ClipYard
-            </button>
-          </div>
-
-          {/* Room info */}
-          <div className="cy-header-info">
-            <div style={S.roomBadge}>
-              <span style={S.roomBadgeLabel} className="cy-hide-mobile">Room:</span>
-              <span style={S.roomBadgeId}>{displayId}</span>
+          <div className="cy-room-header-left">
+            {/* Logo */}
+            <div className="cy-header-logo">
+              <button onClick={leave} style={{ ...S.logo, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                ClipYard
+              </button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ ...S.connectedDot, backgroundColor: isConnected ? 'var(--cy-primary)' : 'var(--cy-error)' }} />
-              <span style={S.connectedLabel}>{isConnected ? 'Connected' : 'Offline'}</span>
+
+            {/* Room info */}
+            <div className="cy-header-info">
+              <div style={S.roomBadge}>
+                <span style={S.roomBadgeLabel} className="cy-hide-mobile">Room:</span>
+                <span style={S.roomBadgeId}>{displayId}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ ...S.connectedDot, backgroundColor: isConnected ? 'var(--cy-primary)' : 'var(--cy-error)' }} />
+                <span style={S.connectedLabel}>{isConnected ? 'Connected' : 'Offline'}</span>
+              </div>
             </div>
           </div>
 
@@ -781,9 +784,8 @@ export default function RoomPage() {
             <button
               id="share-btn"
               onClick={shareRoom}
+              className="cy-btn-ghost"
               style={S.shareBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>share</span>
               <span className="cy-hide-mobile">{notice || 'SHARE'}</span>
@@ -841,18 +843,16 @@ export default function RoomPage() {
             <button
               id="copy-clipboard-btn"
               onClick={copyClipboard}
+              className="cy-btn-primary"
               style={S.copyBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-primary-hover)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-primary)')}
             >
               {copied ? '✓ COPIED' : 'COPY CLIPBOARD'}
             </button>
             <button
               id="clear-btn"
               onClick={() => handleTextChange('')}
+              className="cy-btn-secondary"
               style={S.clearBtn}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container-high)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)')}
             >
               CLEAR
             </button>

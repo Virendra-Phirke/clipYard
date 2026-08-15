@@ -224,6 +224,45 @@ nav {
     box-shadow: none;
   }
 }
+
+/* ── Button Microinteractions ── */
+.cy-btn-primary {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cy-btn-primary:hover {
+  background-color: var(--cy-primary-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--cy-shadow);
+}
+.cy-btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px var(--cy-shadow);
+}
+
+.cy-btn-secondary {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cy-btn-secondary:hover {
+  background-color: var(--cy-surface-container-high) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--cy-shadow);
+}
+.cy-btn-secondary:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px var(--cy-shadow);
+}
+
+.cy-btn-ghost {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.cy-btn-ghost:hover {
+  background-color: var(--cy-surface-container) !important;
+  transform: translateY(-1px);
+}
+.cy-btn-ghost:active {
+  transform: translateY(1px);
+  background-color: var(--cy-surface-container-highest) !important;
+}
 /* Home page: "How it works" grid — 12-col desktop, 1-col mobile */
 .cy-features-grid {
   display: grid;
@@ -332,6 +371,25 @@ nav {
   @apply font-mono text-xs uppercase tracking-[0.16em] text-primary;
 }
 
+.cy-room-header-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.cy-header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cy-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 /* ── Mobile breakpoint ── */
 @media (max-width: 640px) {
   .cy-hero-main {
@@ -348,23 +406,23 @@ nav {
     width: 100%;
   }
 
+  .cy-room-header-left {
+    display: contents !important;
+  }
+
   .cy-header-logo { grid-area: logo; }
   
   .cy-header-actions { 
     grid-area: actions; 
-    display: flex; 
-    align-items: center; 
     gap: 8px;
     justify-self: end;
   }
 
   .cy-header-info {
     grid-area: info;
-    display: flex;
-    align-items: center;
-    gap: 16px;
     padding-top: 8px;
     border-top: 1px dashed var(--cy-border);
+    width: 100%;
   }
 
   .cy-hide-mobile {
