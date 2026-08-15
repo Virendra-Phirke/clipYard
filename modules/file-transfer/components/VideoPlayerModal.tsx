@@ -367,10 +367,17 @@ const VideoPlayerModal: React.FC<VideoPlayerModalProps> = ({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON') return;
+      // Allow shortcuts to work even if a button is focused, but skip inputs
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
       switch (e.key) {
         case ' ':
+          // Let buttons handle space natively (e.g. if user tabbed to Mute)
+          if (tag === 'BUTTON') return;
+          e.preventDefault();
+          togglePlay();
+          wakeControls();
+          break;
         case 'k':
         case 'K':
           e.preventDefault();
