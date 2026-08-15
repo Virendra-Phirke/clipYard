@@ -4,7 +4,7 @@ import { type CSSProperties, useEffect } from 'react'
 import { getFileCategory } from '@/lib/webrtc/fileTransfer'
 import { Download, X } from 'lucide-react'
 import { WaveformPlayer } from './WaveformPlayer'
-import { CustomVideoPlayer } from './CustomVideoPlayer'
+import VideoPlayerModal from './VideoPlayerModal'
 
 /**
  * Props for the FileModal component.
@@ -235,7 +235,19 @@ export const FileModal = ({ url, fileName, mimeType, blob, onClose }: FileModalP
     )
   }
 
-  // Video / Document / Other — keep header-style layout
+  // Video — uses the new full-screen VideoPlayerModal
+  if (category === 'video') {
+    return (
+      <VideoPlayerModal
+        src={url}
+        title={fileName}
+        onClose={onClose}
+        onDownload={handleDownload}
+      />
+    )
+  }
+
+  // Document / Other — keep header-style layout
   return (
     <div style={S.overlay} onClick={onClose}>
       <div style={S.header} onClick={(e) => e.stopPropagation()}>
@@ -275,11 +287,7 @@ export const FileModal = ({ url, fileName, mimeType, blob, onClose }: FileModalP
       </div>
       
       <div style={S.mediaContainer} onClick={(e) => e.stopPropagation()}>
-        {category === 'video' ? (
-          <CustomVideoPlayer url={url} />
-        ) : (
-          <iframe src={url} style={S.iframe} title={fileName} />
-        )}
+        <iframe src={url} style={S.iframe} title={fileName} />
       </div>
     </div>
   )
