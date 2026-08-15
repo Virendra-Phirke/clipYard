@@ -45,15 +45,23 @@ export function drawWaveform(
 
   const gap = 1.5
   const barWidth = Math.max(1, cssW / peaks.length - gap)
-  const progressIndex = Math.floor(progress * peaks.length)
 
+  // Draw the entire waveform in the muted color
+  ctx.fillStyle = colors.muted
   peaks.forEach((p, i) => {
     const barH = Math.max(2, p * cssH)
     const x = i * (barWidth + gap)
     const y = (cssH - barH) / 2
-    ctx.fillStyle = i <= progressIndex ? colors.active : colors.muted
     ctx.fillRect(x, y, barWidth, barH)
   })
+
+  // Overlay the active color smoothly based on exact progress
+  ctx.globalCompositeOperation = 'source-atop'
+  ctx.fillStyle = colors.active
+  ctx.fillRect(0, 0, cssW * progress, cssH)
+  
+  // Reset composite operation
+  ctx.globalCompositeOperation = 'source-over'
 }
 
 export function formatTime(seconds: number): string {
