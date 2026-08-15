@@ -61,7 +61,30 @@ const S: Record<string, CSSProperties> = {
     borderRadius: '6px',
     display: 'block',
   },
-  // Floating action buttons container — top-right of image
+  // Floating action buttons container — outside the image
+  imageActions: {
+    position: 'fixed',
+    top: '24px',
+    right: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    zIndex: 10000,
+  },
+  imageActionBtn: {
+    width: '44px',
+    height: '44px',
+    borderRadius: '8px',
+    border: '1.5px solid var(--cy-border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s, transform 0.15s',
+    backgroundColor: 'var(--cy-surface)',
+    color: 'var(--cy-text)',
+  },
+  // Floating action buttons container — top-right of image (for other media)
   actions: {
     position: 'absolute',
     top: '12px',
@@ -173,40 +196,40 @@ export const FileModal = ({ url, fileName, mimeType, blob, onClose }: FileModalP
         <div style={S.imageWrapper} onClick={(e) => e.stopPropagation()}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={url} alt={fileName} style={S.image} />
+        </div>
 
-          {/* Download + Close overlaid on top-right of the image */}
-          <div style={S.actions}>
-            <button
-              style={S.actionBtn}
-              onClick={handleDownload}
-              title="Download"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.75)'
-                e.currentTarget.style.transform = 'scale(1.1)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.55)'
-                e.currentTarget.style.transform = 'scale(1)'
-              }}
-            >
-              <Download size={18} />
-            </button>
-            <button
-              style={S.actionBtn}
-              onClick={onClose}
-              title="Close"
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.75)'
-                e.currentTarget.style.transform = 'scale(1.1)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.55)'
-                e.currentTarget.style.transform = 'scale(1)'
-              }}
-            >
-              <X size={18} />
-            </button>
-          </div>
+        {/* Download + Close fixed outside the image */}
+        <div style={S.imageActions} onClick={(e) => e.stopPropagation()}>
+          <button
+            style={S.imageActionBtn}
+            onClick={handleDownload}
+            title="Download"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)'
+              e.currentTarget.style.transform = 'scale(1.05)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--cy-surface)'
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+          >
+            <Download size={20} />
+          </button>
+          <button
+            style={S.imageActionBtn}
+            onClick={onClose}
+            title="Close"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--cy-surface-container)'
+              e.currentTarget.style.transform = 'scale(1.05)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--cy-surface)'
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+          >
+            <X size={20} />
+          </button>
         </div>
       </div>
     )
