@@ -218,46 +218,90 @@ export function WaveformPlayer({ url, fileName, blob, onClose, onDownload }: Wav
     }
   }, [audioBuffer, isPlaying])
 
+  const seekToTime = useCallback((newTime: number) => {
+    if (!audioBuffer || !audioCtxRef.current) return
+    const clampedTime = Math.min(audioBuffer.duration, Math.max(0, newTime))
+    
+    pausedAtRef.current = clampedTime
+    setAudioCurrentTime(clampedTime)
+    
+    if (isPlaying) {
+      if (sourceNodeRef.current) {
+        sourceNodeRef.current.onended = null
+        try { sourceNodeRef.current.stop() } catch (e) {}
+        try { sourceNodeRef.current.disconnect() } catch (e) {}
+      }
+      
+      // If we seek to the end, just pause
+      if (clampedTime >= audioBuffer.duration) {
+        setIsPlaying(false)
+        pausedAtRef.current = 0
+        setAudioCurrentTime(0)
+        sourceNodeRef.current = null
+        const canvas = canvasRef.current
+        if (canvas && peaks !== null) {
+          drawWaveform(canvas, peaks, 0, getWaveformColors())
+        }
+        return
+      }
+
+      const source = audioCtxRef.current.createBufferSource()
+      source.buffer = audioBuffer
+      source.connect(audioCtxRef.current.destination)
+      source.start(0, clampedTime)
+      startTimeRef.current = audioCtxRef.current.currentTime
+      sourceNodeRef.current = source
+      source.onended = () => {
+        if (sourceNodeRef.current === source) {
+          setIsPlaying(false)
+          pausedAtRef.current = 0
+          setAudioCurrentTime(0)
+          sourceNodeRef.current = null
+        }
+      }
+    }
+    
+    // Update canvas immediately
+    const canvas = canvasRef.current
+    if (canvas && peaks !== null && audioBuffer.duration > 0) {
+      drawWaveform(canvas, peaks, clampedTime / audioBuffer.duration, getWaveformColors())
+    }
+  }, [audioBuffer, isPlaying, peaks])
+
   const seekWaveform = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!audioBuffer || !audioCtxRef.current) return
+      if (!audioBuffer) return
       const rect = e.currentTarget.getBoundingClientRect()
       const fraction = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
-      const newTime = fraction * audioBuffer.duration
-      
-      pausedAtRef.current = newTime
-      setAudioCurrentTime(newTime)
-      
-      if (isPlaying) {
-        if (sourceNodeRef.current) {
-          sourceNodeRef.current.onended = null
-          try { sourceNodeRef.current.stop() } catch (e) {}
-          try { sourceNodeRef.current.disconnect() } catch (e) {}
-        }
-        const source = audioCtxRef.current.createBufferSource()
-        source.buffer = audioBuffer
-        source.connect(audioCtxRef.current.destination)
-        source.start(0, newTime)
-        startTimeRef.current = audioCtxRef.current.currentTime
-        sourceNodeRef.current = source
-        source.onended = () => {
-          if (sourceNodeRef.current === source) {
-            setIsPlaying(false)
-            pausedAtRef.current = 0
-            setAudioCurrentTime(0)
-            sourceNodeRef.current = null
-          }
-        }
-      }
-      
-      // Update canvas immediately
-      const canvas = canvasRef.current
-      if (canvas && peaks !== null) {
-        drawWaveform(canvas, peaks, fraction, getWaveformColors())
-      }
+      seekToTime(fraction * audioBuffer.duration)
     },
-    [audioBuffer, isPlaying, peaks],
+    [audioBuffer, seekToTime],
   )
+
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return
+      
+      if (e.code === 'Space') {
+        e.preventDefault()
+        togglePlay()
+      } else if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
+        e.preventDefault()
+        if (audioBuffer && audioCtxRef.current) {
+          let current = pausedAtRef.current
+          if (isPlaying) {
+            current += audioCtxRef.current.currentTime - startTimeRef.current
+          }
+          const offset = e.code === 'ArrowRight' ? 5 : -5
+          seekToTime(current + offset)
+        }
+      }
+    }
+    
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [togglePlay, seekToTime, audioBuffer, isPlaying])
 
   return (
     <div style={style.container}>
