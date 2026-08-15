@@ -121,7 +121,7 @@ const S = {
     fontSize: '14px',
     letterSpacing: '0.02em',
     fontWeight: 500,
-    transition: 'background-color 0.2s ease',
+    transition: 'all 0.2s ease',
     whiteSpace: 'nowrap' as const,
   },
   main: {
@@ -345,6 +345,7 @@ export default function RoomPage() {
   const [people, setPeople] = useState(1)
   const [notice, setNotice] = useState('')
   const [copied, setCopied] = useState(false)
+  const [shared, setShared] = useState(false)
   const [userName, setUserName] = useState<string | null | undefined>(undefined)
   const [nameDraft, setNameDraft] = useState('')
   const [lifespanMs, setLifespanMs] = useState<number>(PRESENCE_LIFESPAN_MS)
@@ -641,8 +642,8 @@ export default function RoomPage() {
 
   async function shareRoom() {
     await navigator.clipboard.writeText(roomUrl)
-    setNotice('Room link copied!')
-    setTimeout(() => setNotice(''), 2000)
+    setShared(true)
+    setTimeout(() => setShared(false), 1800)
   }
 
   async function leave() {
@@ -785,10 +786,16 @@ export default function RoomPage() {
               id="share-btn"
               onClick={shareRoom}
               className="cy-btn-ghost"
-              style={S.shareBtn}
+              style={{
+                ...S.shareBtn,
+                color: shared ? 'var(--cy-primary)' : 'var(--cy-text)',
+                borderColor: shared ? 'var(--cy-primary)' : 'var(--cy-border)',
+              }}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>share</span>
-              <span className="cy-hide-mobile">{notice || 'SHARE'}</span>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                {shared ? 'check' : 'share'}
+              </span>
+              <span className="cy-hide-mobile">{shared ? 'COPIED' : 'SHARE'}</span>
             </button>
           </div>
         </header>
