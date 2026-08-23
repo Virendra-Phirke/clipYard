@@ -64,23 +64,11 @@ export function buildMetadata(): Metadata {
       },
     },
     icons: {
-      icon: '/icon.svg',
-      shortcut: '/icon.svg',
-      apple: '/apple-icon.png',
-      other: [
-        {
-          rel: 'icon',
-          url: '/icon-light-32x32.png',
-          sizes: '32x32',
-          media: '(prefers-color-scheme: light)',
-        },
-        {
-          rel: 'icon',
-          url: '/icon-dark-32x32.png',
-          sizes: '32x32',
-          media: '(prefers-color-scheme: dark)',
-        },
+      icon: [
+        { url: '/clipyard-favicon.svg', type: 'image/svg+xml' },
       ],
+      shortcut: '/clipyard-favicon.svg',
+      apple: '/clipyard-favicon.svg',
     },
     manifest: SITE_META.manifestPath,
     openGraph: {

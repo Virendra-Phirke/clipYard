@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="outer" x1="95" y1="70" x2="425" y2="445" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16E0F5"/>
+      <stop offset=".42" stop-color="#1769F5"/>
+      <stop offset=".75" stop-color="#7430F5"/>
+      <stop offset="1" stop-color="#D426E8"/>
+    </linearGradient>
+    <linearGradient id="clip" x1="205" y1="120" x2="305" y2="180" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#22E5F5"/>
+      <stop offset=".55" stop-color="#3C7AF4"/>
+      <stop offset="1" stop-color="#C738E8"/>
+    </linearGradient>
+    <linearGradient id="cyan" x1="320" y1="245" x2="385" y2="265" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1CE6F5"/>
+      <stop offset="1" stop-color="#27B8FF"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="315" y1="305" x2="390" y2="325" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B92CFF"/>
+      <stop offset="1" stop-color="#E04AEF"/>
+    </linearGradient>
+    <linearGradient id="line" x1="175" y1="220" x2="305" y2="220" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1BE4F4"/>
+      <stop offset="1" stop-color="#7049F6"/>
+    </linearGradient>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000000" flood-opacity=".45"/>
+    </filter>
+  </defs>
+
+  <!-- Transparent background -->
+
+  <!-- Outer C / synchronization frame -->
+  <path d="M382 104
+           C349 82 317 72 274 72
+           H190
+           C126 72 84 114 84 178
+           V334
+           C84 398 126 440 190 440
+           H322
+           C351 440 377 434 400 420"
+        stroke="url(#outer)"
+        stroke-width="30"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#softGlow)"/>
+
+  <!-- Inner clipboard body -->
+  <path d="M177 171H157
+           C144 171 135 181 135 195
+           V348
+           C135 362 145 372 158 372
+           H341
+           C355 372 365 361 365 348
+           V196
+           C365 182 355 171 342 171H325"
+        stroke="#64748B"
+        stroke-width="17"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#shadow)"/>
+
+  <!-- Clipboard fill -->
+  <path d="M153 197C153 190 158 186 165 186H335C342 186 347 191 347 198V345C347 352 342 357 335 357H165C158 357 153 352 153 345V197Z"
+        fill="#071326"
+        fill-opacity=".92"/>
+
+  <!-- Clipboard top clip -->
+  <path d="M205 162V147
+           C205 131 218 120 234 120
+           H278
+           C294 120 307 131 307 147
+           V162
+           C307 173 299 181 288 181
+           H224
+           C213 181 205 173 205 162Z"
+        fill="url(#clip)"
+        filter="url(#shadow)"/>
+
+  <circle cx="256" cy="149" r="13" fill="#09152A" stroke="#7DDCFF" stroke-width="3"/>
+
+  <!-- Clipboard content -->
+  <rect x="177" y="218" width="127" height="14" rx="7"
+        fill="url(#line)" filter="url(#softGlow)"/>
+  <rect x="177" y="258" width="83" height="14" rx="7"
+        fill="url(#line)" filter="url(#softGlow)"/>
+
+  <circle cx="189" cy="305" r="10" fill="#20DFF2" filter="url(#softGlow)"/>
+  <circle cx="221" cy="305" r="10" fill="#4A75F4" filter="url(#softGlow)"/>
+  <circle cx="253" cy="305" r="10" fill="#B637EF" filter="url(#softGlow)"/>
+
+  <!-- Right transfer arrow -->
+  <path d="M315 255H383
+           M383 255L359 231
+           M383 255L359 279"
+        stroke="url(#cyan)"
+        stroke-width="18"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#softGlow)"/>
+
+  <!-- Left transfer arrow -->
+  <path d="M384 311H316
+           M316 311L340 287
+           M316 311L340 335"
+        stroke="url(#purple)"
+        stroke-width="18"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        filter="url(#softGlow)"/>
+</svg>

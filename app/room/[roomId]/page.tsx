@@ -1,7 +1,6 @@
 'use client'
 
-import Image from 'next/image'
-import { FileSharePanel, AttachmentMenu } from '@/modules/file-transfer'
+import { FileSharePanel, AttachmentMenu, ClipboardDropOverlay } from '@/modules/file-transfer'
 import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useDebounce } from 'use-debounce'
@@ -143,6 +142,8 @@ const S = {
     border: '1.5px solid var(--cy-border)',
     overflow: 'hidden',
     boxShadow: '0 1px 2px 0 var(--cy-shadow)',
+    position: 'relative' as const,
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
   },
   textarea: {
     width: '100%',
@@ -371,10 +372,109 @@ export default function RoomPage() {
   const firebaseUidRef = useRef('')
   const [presenceMap, setPresenceMap] = useState<Record<string, { name?: string; sid?: string; [key: string]: unknown }>>({})
 
-  // Ref that FileSharePanel populates with its sendFile, so AttachmentMenu can trigger transfers
+  // Ref that FileSharePanel populates with its sendFile, so AttachmentMenu and Dropzone can trigger transfers
   const sendFileRef = useRef<((file: File) => void) | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [transferToast, setTransferToast] = useState<{ message: string; type?: 'info' | 'success' | 'warning' } | null>(null)
+  const dragCounterRef = useRef(0)
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const showToast = useCallback((message: string, type: 'info' | 'success' | 'warning' = 'info') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
+    setTransferToast({ message, type })
+    toastTimeoutRef.current = setTimeout(() => {
+      setTransferToast(null)
+    }, 3800)
+  }, [])
+
   const handleAttachmentFiles = useCallback((files: File[]) => {
-    files.forEach((f) => sendFileRef.current?.(f))
+    if (!files || files.length === 0) return
+    if (!sendFileRef.current) {
+      showToast('File transfer is initializing...', 'warning')
+      return
+    }
+
+    let queuedCount = 0
+    files.forEach((f) => {
+      try {
+        sendFileRef.current?.(f)
+        queuedCount++
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Unable to send file', 'warning')
+      }
+    })
+
+    if (queuedCount > 0) {
+      const summary = queuedCount === 1
+        ? `Sending "${files[0].name}" (${(files[0].size / (1024 * 1024)).toFixed(1)} MB)...`
+        : `Sending ${queuedCount} files to room peers...`
+      showToast(summary, 'success')
+    }
+  }, [showToast])
+
+  // Drag and drop handlers
+  const handleDragEnter = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault()
+      e.stopPropagation()
+      dragCounterRef.current++
+      setIsDragging(true)
+    }
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault()
+      e.stopPropagation()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes('Files')) {
+      e.preventDefault()
+      e.stopPropagation()
+      dragCounterRef.current--
+      if (dragCounterRef.current <= 0) {
+        dragCounterRef.current = 0
+        setIsDragging(false)
+      }
+    }
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounterRef.current = 0
+    setIsDragging(false)
+    const files = Array.from(e.dataTransfer?.files || [])
+    if (files.length > 0) {
+      handleAttachmentFiles(files)
+    }
+  }, [handleAttachmentFiles])
+
+  // Paste handler for files/screenshots in clipboard
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(e.clipboardData?.files || [])
+    if (files.length > 0) {
+      e.preventDefault()
+      handleAttachmentFiles(files)
+    }
+  }, [handleAttachmentFiles])
+
+  // Prevent browser from opening dropped files if dropped outside designated dropzones
+  useEffect(() => {
+    const preventWindowDrop = (e: DragEvent) => {
+      if (e.dataTransfer?.types && Array.from(e.dataTransfer.types).includes('Files')) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('dragover', preventWindowDrop)
+    window.addEventListener('drop', preventWindowDrop)
+    return () => {
+      window.removeEventListener('dragover', preventWindowDrop)
+      window.removeEventListener('drop', preventWindowDrop)
+    }
   }, [])
 
   const [serverDevices, setServerDevices] = useState<Device[]>([])
@@ -806,12 +906,24 @@ export default function RoomPage() {
         {/* Editor column — 8 cols on desktop, full on mobile */}
         <div className="cy-room-editor" style={S.editorCol}>
           {/* Textarea card */}
-          <div style={S.editorCard}>
+          <div
+            style={{
+              ...S.editorCard,
+              borderColor: isDragging ? 'var(--cy-primary)' : 'var(--cy-border)',
+              boxShadow: isDragging ? '0 0 24px rgba(22, 133, 106, 0.35)' : '0 1px 2px 0 var(--cy-shadow)',
+            }}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <ClipboardDropOverlay isDragging={isDragging} />
             <textarea
               id="clipboard-textarea"
               value={text}
               onChange={(e) => handleTextChange(e.target.value)}
-              placeholder="Paste or type text here..."
+              onPaste={handlePaste}
+              placeholder="Paste or type text here... (or drag & drop images, videos, docs to beam to peers)"
               spellCheck={false}
               style={S.textarea}
             />
@@ -968,6 +1080,48 @@ export default function RoomPage() {
 
         </div>
       </main>
+
+      {/* ── Transfer notification toast ── */}
+      {transferToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            bottom: '28px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            backgroundColor: 'var(--cy-surface)',
+            border: `1.5px solid ${transferToast.type === 'warning' ? 'var(--cy-warning)' : 'var(--cy-primary)'}`,
+            color: 'var(--cy-text)',
+            padding: '10px 18px',
+            borderRadius: '6px',
+            fontFamily: 'Space Mono, monospace',
+            fontSize: '13px',
+            boxShadow: '0 8px 30px var(--cy-shadow), 0 0 16px rgba(22, 133, 106, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            maxWidth: '90vw',
+            animation: 'cy-fade-in 0.2s ease-out',
+          }}
+        >
+          <span
+            className="material-symbols-outlined"
+            style={{
+              fontSize: '18px',
+              color: transferToast.type === 'warning' ? 'var(--cy-warning)' : 'var(--cy-primary)',
+              flexShrink: 0,
+            }}
+          >
+            {transferToast.type === 'warning' ? 'warning' : 'cloud_upload'}
+          </span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {transferToast.message}
+          </span>
+        </div>
+      )}
 
       {/* ── Footer ── */}
       <footer style={S.footer}>
@@ -1254,13 +1408,30 @@ function QrCard({ roomUrl }: { roomUrl: string }) {
             style={{ width: '100%', height: '100%' }}
           />
         ) : (
-          <Image
-            src="/qr-placeholder.png"
-            alt="QR code to join this room"
-            width={176}
-            height={176}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+          <div
+            style={{
+              width: 176,
+              height: 176,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'var(--cy-surface-container)',
+              borderRadius: '4px',
+              gap: '8px',
+            }}
+          >
+            <span style={{ fontSize: '20px' }}>◈</span>
+            <span
+              style={{
+                fontSize: '12px',
+                color: 'var(--cy-text-muted)',
+                fontFamily: 'Space Mono, monospace',
+              }}
+            >
+              Generating QR...
+            </span>
+          </div>
         )}
       </div>
     </div>

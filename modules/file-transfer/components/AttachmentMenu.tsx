@@ -407,7 +407,7 @@ export function AttachmentMenu({ onFilesSelected, disabled }: AttachmentMenuProp
           id="attach-document"
           ref={docInputRef}
           type="file"
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.zip,.rar,.odt,.odp,.ods"
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.zip,.rar,.tar,.gz,.7z,.odt,.odp,.ods,.json,.xml,.md,.ts,.js,.py,.html,.css,*/*"
           multiple
           style={{ display: 'none' }}
           onChange={handleDocument}

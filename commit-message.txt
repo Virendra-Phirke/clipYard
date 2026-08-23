@@ -1,3 +1,0 @@
-docs: improve project documentation
-
-Co-authored-by: Mahesh Chopade <maheshchopade133@gmail.com>

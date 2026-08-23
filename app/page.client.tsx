@@ -218,7 +218,7 @@ export default function HomePageClient() {
               marginBottom: "40px",
             }}
           >
-            A temporary clipboard for moving text between your laptop, phone,
+            A temporary clipboard for moving text, images, videos, and documents between your laptop, phone,
             and desktop. No account. No setup.
           </p>
 
@@ -557,9 +557,9 @@ export default function HomePageClient() {
                 desc: "Use the 8-character code or QR to join from any device.",
               },
               {
-                num: "03 COPY",
-                title: "Sync text instantly",
-                desc: "Paste on one device, copy on the other. Disappears when closed.",
+                num: "03 BEAM & SYNC",
+                title: "Sync text & drop files",
+                desc: "Paste text or drag-and-drop docs, images, and videos. Disappears when closed.",
               },
             ].map((step) => (
               <div
@@ -626,8 +626,9 @@ export default function HomePageClient() {
           >
             {[
               "NO ACCOUNT REQUIRED",
-              "REAL-TIME WEBSOCKET SYNC",
-              "E2E ENCRYPTION OPTION",
+              "REAL-TIME TEXT & FILE SYNC",
+              "DRAG & DROP P2P TRANSFERS",
+              "E2E ENCRYPTION PROTOCOL",
             ].map((item) => (
               <div key={item} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <span
