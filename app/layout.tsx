@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { buildMetadata, SITE_META } from '@/lib/seo/config'
 import './globals.css'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import { Analytics } from '@vercel/analytics/next'
 
 export const metadata: Metadata = buildMetadata()
 export const viewport = { width: 'device-width', initialScale: 1 }
@@ -45,6 +46,7 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   )
